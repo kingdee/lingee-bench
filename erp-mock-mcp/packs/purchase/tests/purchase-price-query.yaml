@@ -1,0 +1,116 @@
+# 包级测试用例：声明式查询 purchase_price_query 的回放用例（需求 21 第 9、13 条）。
+#
+# setup 建四张采购订单，覆盖查询的三层筛选（需求 5 第 13 条）：
+#   older   已关闭、上月、主供应商、第一个物料 —— filter 选中，是较早的一次成交
+#   recent  已审核、本月 1 日、主供应商、两个物料 —— filter 选中，是最近的一次成交
+#   drafted 草稿、本月 5 日、主供应商、第一个物料 —— 被 filter 排除（草稿不算成交价）
+#   another 已审核、本月 6 日、另一个供应商 —— 被 supplier_id 参数排除
+# 其中 drafted 的业务日期和单价都比 recent 新、比 recent 高，所以它一旦被选中，latest 就错了。
+#
+# 排序为 header.biz_date 降序、header.number 降序，引擎再以分录 ID 升序兜底；latest 取第一条
+# 记录的四个字段，history 取前至多 5 条（含第一条）。没有匹配记录时 latest 为 null、
+# history 为空数组。
+#
+# 日期写成相对锚点日期的表达式，锚点日期写定为 2026-10-09，所以 month(-1).day(12) 是
+# 2026-09-12、month(0).day(1) 是 2026-10-01。订单的交货日期都不早于各自的业务日期，
+# 否则 R-PUR-001 会让构建失败。
+#
+# 内部 ID 按书写顺序分配：供应商为 sup_000001、sup_000002，物料为 mat_000001、mat_000002。
+#
+# 返回中的单价去掉了小数末尾的 0：price 是 price 类型，按需求 4 第 8 条输出，所以写进 setup 的
+# "0.90" 查出来是 "0.9"（money 类型才固定保留两位，如订单表头的金额）。
+case: purchase-price-query
+anchor_date: 2026-10-09
+setup:
+  supplier:main:
+    kind: supplier
+    name: 查询用例专用密封件供应商
+    short_name: 查询密封
+  supplier:other:
+    kind: supplier
+    name: 查询用例专用备用供应商
+    short_name: 查询备用
+  material:ring:
+    kind: material
+    name: 查询用例专用密封圈
+    spec: 查询用例规格 D12
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: PCS
+    tax_rate: "0.13"
+  material:belt:
+    kind: material
+    name: 查询用例专用齿形带
+    spec: 查询用例规格 T2P5
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: PCS
+    tax_rate: "0.13"
+  purchase_order:older:
+    kind: purchase_order
+    supplier: "supplier:main"
+    biz_date: month(-1).day(12)
+    delivery_date: month(-1).day(20)
+    status: closed
+    lines:
+      - { material: "material:ring", unit: PCS, qty: "100", price: "0.90" }
+  purchase_order:recent:
+    kind: purchase_order
+    supplier: "supplier:main"
+    biz_date: month(0).day(1)
+    delivery_date: month(0).day(20)
+    status: approved
+    lines:
+      - { material: "material:ring", unit: PCS, qty: "50", price: "0.95" }
+      - { material: "material:belt", unit: PCS, qty: "80", price: "0.30" }
+  purchase_order:drafted:
+    kind: purchase_order
+    supplier: "supplier:main"
+    biz_date: month(0).day(5)
+    delivery_date: month(0).day(25)
+    lines:
+      - { material: "material:ring", unit: PCS, qty: "10", price: "9.99" }
+  purchase_order:another:
+    kind: purchase_order
+    supplier: "supplier:other"
+    biz_date: month(0).day(6)
+    delivery_date: month(0).day(26)
+    status: approved
+    lines:
+      - { material: "material:ring", unit: PCS, qty: "7", price: "5.55" }
+steps:
+  # 主供应商与第一个物料：两次成交，最近的一次是本月 1 日的已审核订单
+  - call: purchase_price_query
+    args: { supplier_id: "$supplier:main", material_id: "$material:ring" }
+    expect:
+      result:
+        latest:
+          price: "0.95"
+          price_includes_tax: true
+          biz_date: "2026-10-01"
+        history:
+          - { price: "0.95", biz_date: "2026-10-01" }
+          - { price: "0.9", biz_date: "2026-09-12" }
+  # 物料在分录上比较：同一张订单的另一行是另一个物料，只有它自己的那一次成交
+  - call: purchase_price_query
+    args: { supplier_id: "$supplier:main", material_id: "$material:belt" }
+    expect:
+      result:
+        latest: { price: "0.3", biz_date: "2026-10-01" }
+        history:
+          - { price: "0.3", biz_date: "2026-10-01" }
+  # 供应商在表头上比较：另一个供应商只有它自己的那一次成交
+  - call: purchase_price_query
+    args: { supplier_id: "$supplier:other", material_id: "$material:ring" }
+    expect:
+      result:
+        latest: { price: "5.55", biz_date: "2026-10-06" }
+        history:
+          - { price: "5.55", biz_date: "2026-10-06" }
+  # 没有成交记录：latest 为 null，history 为空数组，不是错误
+  - call: purchase_price_query
+    args: { supplier_id: "$supplier:other", material_id: "$material:belt" }
+    expect:
+      result:
+        latest: null
+        history: []

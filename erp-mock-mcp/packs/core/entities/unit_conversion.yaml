@@ -1,0 +1,13 @@
+# 单位换算：一条记录表示某个物料的 1 个 from_unit 折合 factor 个基本单位
+# （需求 6 第 6 条），如 1 BOX = 12 PCS。物料的 unit_conversion 声明指向本实体。
+#
+# 业务数据（shared 为 false），随物料写在初始数据集里。引擎校验换算单位不等于基本单位、
+# 系数大于 0、同一物料的换算单位不重复（需求 6 第 11 条）。
+# 不声明 operations：换算关系随 material_get 一起返回，不单独生成工具。
+entity: unit_conversion
+label: { zh: 单位换算, en: Unit conversion }
+id_prefix: ucv
+fields:
+  material_id:  { type: ref, ref: material, label: { zh: 物料, en: Material }, required: true }
+  from_unit_id: { type: ref, ref: unit, label: { zh: 换算单位, en: Alternative unit }, required: true }
+  factor:       { type: qty, label: { zh: 换算系数, en: Factor }, required: true }

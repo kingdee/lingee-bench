@@ -1,0 +1,8 @@
+{
+  "name": "lg-harness-deepseek-harness",
+  "private": true,
+  "description": "lg-bench harness 只读镜像的依赖锁定；由 lg-bench harness 维护",
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.2.0-rc.2"
+  }
+}

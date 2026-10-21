@@ -1,0 +1,24 @@
+# 审核时按 out 方向减少库存的单据；taker_id 的缺省值取当前用户（需求 5 第 1 条）。
+bill: issue_note
+label: { zh: 发料单, en: Issue note }
+id_prefix: isu
+number: { prefix: ISS }
+state_machine: standard
+operations: [search, get, create, update, delete, submit, unsubmit, approve, unapprove]
+header:
+  depot_id: { type: ref, ref: depot, label: { zh: 发料仓库, en: Depot }, required: true }
+  taker_id:
+    type: ref
+    ref: operator
+    label: { zh: 领用人, en: Taker }
+    required: true
+    default_context: user
+lines:
+  article_id: { type: ref, ref: article, label: { zh: 存货, en: Article }, required: true }
+  measure_id: { type: ref, ref: measure, label: { zh: 计量单位, en: Measure }, default_from: article.base_measure_id }
+  issue_qty:  { type: qty, label: { zh: 发料数量, en: Issued quantity }, required: true }
+line_quantity: { material_field: article_id, unit_field: measure_id, qty_field: issue_qty }
+search:
+  keyword_fields: [number]
+  filters: [status, biz_date]
+  default_sort: [biz_date desc, number desc]

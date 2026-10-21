@@ -1,0 +1,25 @@
+# exclude 去掉一个已生成的标准工具，rename 覆盖一个工具名（动作仍为 create），
+# source_short_names 决定下推工具名与其 `<来源简称>_id` 参数：
+# goods_entry_create_from_order 与 pay_slip_create_from_fee（需求 11 第 1、13 条）。
+pack: fx_trade
+exclude: [count_sheet_unapprove]
+rename:
+  stock_move_create: stock_move_draft_create
+source_short_names:
+  supply_order: order
+  fee_note: fee
+queries:
+  # 声明式查询：带 filter，source 为单据分录，所以 filter 与 returns 可以同时用
+  # line. 与 header.（需求 5 第 13 条、需求 10 第 10 条）。
+  - tool: supply_price_query
+    source: supply_order_line
+    params:
+      vendor_id:  { type: ref, ref: vendor, required: true, maps_to: header.vendor_id }
+      article_id: { type: ref, ref: article, required: true, maps_to: line.article_id }
+    filter: "header.status in ['approved', 'closed']"
+    sort: [header.biz_date desc, header.number desc]
+    returns:
+      latest: [line.price, header.price_includes_tax, header.biz_date, header.number]
+      history: { fields: [line.price, header.biz_date, header.number], limit: 5 }
+  # 原语查询：即时库存由 inventory 原语提供参数与结果（需求 9 第 7 条）。
+  - { tool: stock_level_query, primitive: inventory, query: balance }

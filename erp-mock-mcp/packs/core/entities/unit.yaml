@@ -1,0 +1,12 @@
+# 计量单位：共享基础数据。编码由共享数据写定（PCS、BOX、KG……），所以不声明 code 生成规则；
+# 初始数据集与其他共享数据按编码引用它（需求 20 第 16 条）。
+#
+# 不声明 operations，所以不生成工具：模型通过 material_get 返回的 base_unit、purchase_unit
+# 和 unit_conversions 看到计量单位，单据分录的 unit_id 填这些对象里的 id。
+entity: unit
+label: { zh: 计量单位, en: Unit }
+id_prefix: unit
+shared: true
+fields:
+  code: { type: string, label: { zh: 编码, en: Code }, required: true, unique: true }
+  name: { type: string, label: { zh: 名称, en: Name }, required: true }

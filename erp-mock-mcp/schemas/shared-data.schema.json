@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shared-data.schema.json",
+  "additionalProperties": false,
+  "description": "``seed/shared/<name>.yaml``: the Shared_Data records a pack provides.\n\nThe Seed_Builder creates them through the engine before the dataset's own records, in\nthe order they are written (requirement 20.17).",
+  "properties": {
+    "records": {
+      "items": {
+        "additionalProperties": false,
+        "patternProperties": {
+          "^[a-z][a-z0-9_]*$": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "title": "Records",
+      "type": "array"
+    }
+  },
+  "required": [
+    "records"
+  ],
+  "title": "SharedDataFile",
+  "type": "object"
+}

@@ -1,0 +1,54 @@
+# 工具暴露（tool-design.md 第 2 节）：本包按各单据的 operations、两个 conversion 和 queries
+# 生成 27 个工具，正是 example-p2p.md 第 8 节为 purchase 列出的那 27 个。生成顺序按需求 11
+# 第 9 条：先按 entities/ 的文件路径逐个单据（purchase_order、purchase_receipt、
+# purchase_requisition），每个单据内按 operations 顺序；再按 conversions/ 的文件路径输出两个
+# 下推工具（purchase_receipt_create_from_order、purchase_order_create_from_requisition）；
+# 最后按声明顺序输出 queries 的工具。
+#
+# exclude 去掉 13 个不在 example-p2p.md 第 9 节 M0 工具清单中的工具，剩下 14 个
+# （需求 21 第 4 条）：配置本身保留，供领域层、初始数据集构建和包级测试使用。
+#   采购申请单：get、update、delete、submit、approve
+#   采购订单：  delete、unsubmit、unapprove、unclose
+#   采购入库单：search、get、delete、unapprove
+# 其中 purchase_requisition_get 与采购入库单的 get、search、delete 是引言中列出的 M0 已知
+# 限制，不是笔误（见 README.md 的"已知简化"）。
+#
+# 没有 rename：27 个生成名都符合命名格式，没有要覆盖的。
+pack: purchase
+exclude:
+  [
+    purchase_requisition_get,
+    purchase_requisition_update,
+    purchase_requisition_delete,
+    purchase_requisition_submit,
+    purchase_requisition_approve,
+    purchase_order_delete,
+    purchase_order_unsubmit,
+    purchase_order_unapprove,
+    purchase_order_unclose,
+    purchase_receipt_search,
+    purchase_receipt_get,
+    purchase_receipt_delete,
+    purchase_receipt_unapprove,
+  ]
+# 下推工具名与其 `<来源简称>_id` 参数中的来源简称（需求 11 第 13 条）：不声明时取来源单据名，
+# 那样会得到 purchase_order_create_from_purchase_requisition 这种名字。
+source_short_names:
+  purchase_requisition: requisition
+  purchase_order: order
+queries:
+  # 采购价格查询（需求 21 第 13 条）：source 为采购订单分录，所以 filter、sort 与 returns
+  # 可以同时用 line. 和 header.（需求 5 第 13 条、需求 10 第 10 条）。
+  # 两个参数都必填，分别在表头和分录上比较；filter 只选已审核和已关闭的订单，草稿与已提交的
+  # 订单不算成交价；排序取业务日期降序、编号降序，引擎再以分录 ID 升序兜底，保证结果稳定。
+  # latest 为第一条记录的四个字段，history 为前至多 5 条的三个字段（含第一条）。
+  - tool: purchase_price_query
+    source: purchase_order_line
+    params:
+      supplier_id: { type: ref, ref: supplier, required: true, maps_to: header.supplier_id }
+      material_id: { type: ref, ref: material, required: true, maps_to: line.material_id }
+    filter: "header.status in ['approved', 'closed']"
+    sort: [header.biz_date desc, header.number desc]
+    returns:
+      latest: [line.price, header.price_includes_tax, header.biz_date, header.number]
+      history: { fields: [line.price, header.biz_date, header.number], limit: 5 }

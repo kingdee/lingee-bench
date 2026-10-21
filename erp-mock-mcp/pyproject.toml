@@ -1,0 +1,120 @@
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "erp-mock"
+# Keep equal to erp_mock.FRAMEWORK_VERSION.
+version = "0.1.0"
+description = "ERP-Mock-MCP: a business-agnostic, deterministic ERP mock served over MCP"
+requires-python = ">=3.12,<3.13"
+# Direct dependencies are pinned with ==; every transitive version is locked in uv.lock.
+dependencies = [
+    "click==8.5.0",
+    "faker==40.43.0",
+    "mcp==1.30.0",
+    "pydantic==2.14.0",
+    "pyyaml==6.0.3",
+    "sqlalchemy==2.1.4",
+    "starlette==1.7.0",
+    "tzdata==2026.5",
+    "uvicorn==0.54.0",
+]
+
+[project.scripts]
+erp-mock-mcp = "erp_mock.cli.main:main"
+
+[dependency-groups]
+# The dev group is installed by `uv sync` by default.
+dev = [
+    "httpx==0.28.1",
+    "hypothesis==6.168.5",
+    "jsonschema==4.26.0",
+    "mypy==2.4.0",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.0",
+    "types-jsonschema==4.26.0.20261006",
+    "types-pyyaml==6.0.12.20260906",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/erp_mock"]
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "T20", # flake8-print: T201 forbids print(); in stdio mode stdout carries only MCP messages
+]
+# Line length is left to `ruff format`; literals it cannot wrap are accepted.
+ignore = ["E501"]
+
+# ---------------------------------------------------------------------------
+# mypy
+# ---------------------------------------------------------------------------
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests", "scripts"]
+# Package roots are src/ and the working directory (the repository root, where mypy runs),
+# so test files are checked as `tests.<...>` modules and scripts as `scripts.<...>`
+# modules, and `from tests.helpers.<module> import ...` or `from scripts.<module>
+# import ...` resolves the same way it does under pytest.
+mypy_path = "src"
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+# Report override sections that match no module.
+warn_unused_configs = true
+# Part of --strict but global-only, so it applies to every module.
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+# erp_mock.domain is checked in strict mode (requirement 25.7). `strict = true` in an
+# override enables strict mode for every module, so the per-module flags that
+# --strict implies (mypy 2.4) are listed explicitly. The pattern also matches
+# erp_mock.domain itself.
+module = ["erp_mock.domain.*"]
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_unused_ignores = true
+warn_return_any = true
+implicit_reexport = false
+strict_equality = true
+extra_checks = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode leaves sys.path alone; putting the repository root on it lets test code
+# import shared helpers from the `tests` package: `from tests.helpers.<module> import ...`.
+pythonpath = ["."]
+addopts = ["--import-mode=importlib", "--strict-markers"]
+markers = [
+    "req(*criteria): acceptance criteria covered by the test, each written as '<requirement>.<item>', e.g. req(\"23.7\")",
+]

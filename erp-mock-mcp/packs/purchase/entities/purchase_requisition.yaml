@@ -1,0 +1,46 @@
+# 采购申请单：采购主线的第一张单据（example-p2p.md 第 4 节）。部门提出需求，审核后由
+# purchase_requisition_to_order 下推成采购订单。
+#
+# 不启用 pricing：申请只说要什么、要多少、什么时候要，单价在下推订单时才由采购员填写
+# （conversions/purchase_requisition_to_order.yaml 的 required_line_inputs 含 price）。
+# 所以分录自己声明 qty 字段，并在 line_quantity 中指定它（需求 1 第 4 条）：引擎据此为分录
+# 添加只读的 qty_base，下推额度就按源行的 qty_base 计（需求 8 第 5 条）。
+#
+# 本单据是下推的来源，引擎为它的分录添加只读的 linked_qty，由反写维护（需求 8 第 8 条）。
+#
+# operations 是 example-p2p.md 第 8 节为采购申请单列出的 7 个工具所对应的操作（需求 21 第 4 条）。
+# M0 工具清单只保留 search 与 create，其余 5 个由 tools/exposure.yaml 的 exclude 去掉；
+# 其中 get 的缺失是引言中列出的已知限制：模型读不到申请单的分录 ID 和数量，所以
+# purchase_order_create_from_requisition 在 M0 主要由已知 ID 的调用方使用（见 README.md）。
+bill: purchase_requisition
+label: { zh: 采购申请单, en: Purchase requisition }
+id_prefix: preq
+number: { prefix: CGSQ }
+state_machine: standard
+operations: [search, get, create, update, delete, submit, approve]
+header:
+  department_id:
+    type: ref
+    ref: department
+    label: { zh: 申请部门, en: Requesting department }
+    required: true
+  applicant_id:
+    type: ref
+    ref: employee
+    label: { zh: 申请人, en: Applicant }
+    required: true
+    default_context: user
+  need_date: { type: date, label: { zh: 需求日期, en: Required date }, required: true }
+lines:
+  material_id: { type: ref, ref: material, label: { zh: 物料, en: Material }, required: true }
+  unit_id:
+    type: ref
+    ref: unit
+    label: { zh: 计量单位, en: Unit }
+    default_from: material.purchase_unit_id
+  qty: { type: qty, label: { zh: 申请数量, en: Requested quantity }, required: true }
+line_quantity: { material_field: material_id, unit_field: unit_id, qty_field: qty }
+search:
+  keyword_fields: [number]
+  filters: [status, department_id, biz_date]
+  default_sort: [biz_date desc, number desc]

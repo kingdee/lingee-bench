@@ -1,0 +1,42 @@
+# 包级测试用例：enforced 规则 R-FXT-001 的违反用例与通过用例（需求 21 第 9 条）。
+#
+# 规则的 check 是 `header.from_depot_id != header.to_depot_id`，on 含 create，
+# 所以两步都在 create 时求值：第 1 步两仓相同，返回 VALIDATION_FAILED 与 rule_id
+# R-FXT-001；第 2 步两仓不同，建出草稿。create 只改表头与分录，不动库存，所以本用例
+# 不需要期初库存。
+#
+# 仓库写的是 fx_base 共享数据的内部 ID：计数器从 0 开始，共享数据先建，
+# 所以 dep_000001 是 D001 夹具主料仓、dep_000002 是 D002 夹具辅料仓（需求 20 第 17 条）。
+# 存货没有 shared，要在 setup 里建，并用 $article:part 写进参数。
+case: fxt-001-depots-differ
+setup:
+  article:part:
+    kind: article
+    name: 规则用例专用紧固件
+    spec: M8X40
+    grade: plain
+    base_measure: PCS
+    tax_rate: "0.13"
+steps:
+  # 调入仓与调出仓相同：规则不成立，错误指向 to_depot_id
+  - call: stock_move_draft_create
+    args:
+      from_depot_id: dep_000001
+      to_depot_id: dep_000001
+      lines:
+        - { article_id: "$article:part", measure_id: msr_000001, move_qty: "10" }
+    expect: { is_error: true, error_code: VALIDATION_FAILED, rule_id: R-FXT-001 }
+  # 两仓不同：规则成立，建出 draft 草稿（stock_move_create 被 rename 为 draft_create）
+  - call: stock_move_draft_create
+    args:
+      from_depot_id: dep_000001
+      to_depot_id: dep_000002
+      lines:
+        - { article_id: "$article:part", measure_id: msr_000001, move_qty: "10" }
+    alias: stock_move:drafted
+    expect:
+      is_error: false
+      result:
+        status: draft
+        from_depot: { id: dep_000001, code: D001 }
+        to_depot: { id: dep_000002, code: D002 }

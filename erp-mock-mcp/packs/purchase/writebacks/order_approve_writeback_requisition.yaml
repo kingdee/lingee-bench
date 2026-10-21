@@ -1,0 +1,18 @@
+# 采购订单审核时反写采购申请单（需求 21 第 11 条）：on 为 approve，reverse_on 为 unapprove，
+# target 为 source_line.linked_qty，op 为 add，value 为 line.qty_base。
+#
+# 每个订单分录的基本单位数量累加到它 source_line_id 所指申请行的 linked_qty（需求 8 第 8 条），
+# 反审核时逆向减去同样的数值（需求 8 第 9 条）。linked_qty 只统计已审核（或已关闭）的下游单据，
+# 这就是 INV-2；下推额度统计的是全部未删除的下游单据，含草稿，两者口径不同。
+#
+# 不声明 auto_close_source_when：申请单各行全部订货后不自动关闭（需求 21 第 11 条只让
+# purchase_order_to_receipt 的反写声明它）。采购申请单常常分批订货，而且 M0 没有暴露
+# purchase_requisition 的 close 与 unclose 工具，自动关闭之后模型也看不到、改不动。
+writeback:
+  id: order_approve_writeback_requisition
+  conversion: purchase_requisition_to_order
+  on: approve
+  target: source_line.linked_qty
+  op: add
+  value: line.qty_base
+  reverse_on: unapprove

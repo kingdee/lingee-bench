@@ -1,0 +1,181 @@
+# 夹具的初始数据集（seed-data.md 第 2 节，需求 20 第 1 条）。
+#
+# 构建顺序（需求 20 第 17 条）：先建 fx_base 的共享基础数据（组织、仓库、计量单位、操作员），
+# 再按书写顺序建 entities，最后按 bulk 批量生成。单据经引擎按正常操作生成：standard 单据的
+# approved 依次执行 submit 与 approve，closed 再执行 close（记为手工关闭），simple 单据的
+# approved 只执行 approve；库存、反写与自动关闭都由引擎完成（需求 20 第 2 条）。
+#
+# 写法（需求 20 第 16 条）：
+#   - 键是别名 `<kind>:<名称>`，别名先声明后引用，构建后输出别名到内部 ID 的映射。
+#   - ref 字段去掉 _id 书写：值为别名时引用该记录，否则按编码引用已创建的记录（如 measure: PCS）。
+#   - 小数与日期一律是文本；日期写成相对锚点日期的表达式。
+#   - 下推生成的单据写 source（来源单据的别名），分录用 source_line 写来源行号，
+#     不再写 header_mapping 已映射的表头字段（付款单的 vendor 与 price_includes_tax）。
+#
+# 构建后的期初状态（锚点日期 2026-10-09）：
+#   即时库存   D001 六角螺栓 360（120 + 400 收料，减 100 发料、60 移出）；D002 六角螺栓 60；D002 平垫圈 40
+#   供货订单   so_000001 已收足并自动关闭；so_000002 第 1 行收 400/600、第 2 行未收，保持 approved；
+#              so_000003 手工关闭；so_000004 已提交；so_000005 为草稿
+#   费用单     fn_000001 已审核，价税合计 1060，已下推付款 530，可付金额 530
+#   停用资料   ven_000003 的 status 为 disabled，用于 R-GEN-006
+dataset: fx-basic
+version: 1.0.0
+random_seed: 20261009
+include_shared: [fx_base]
+# 当前用户是 fx_base 共享数据中的第一个操作员，与 instance.yaml 的 current_user 相同；
+# 只接受内部 ID，不按别名或编码解析。
+current_user: opr_000001
+# 上月仍未结账，所以下面落在 month(-1) 的历史单据都在未结账期间内。
+periods: { closed_before: "month(-1)" }
+entities:
+  # ---------- 往来单位 ----------
+  vendor:main: # ven_000001，编码 V0001；contact 由生成器填充，其余字段写死
+    kind: vendor
+    name: 夹具主力供货单位
+    short_name: 夹具主力
+    contact: { gen: person_name }
+    pay_days: 45
+  vendor:spare: # ven_000002，编码 V0002；账期与缺省税率取字段缺省值
+    kind: vendor
+    name: 夹具备用供货单位
+    short_name: 夹具备用
+  vendor:retired: # ven_000003，编码 V0003；停用的基础资料，写进新单据时违反 R-GEN-006
+    kind: vendor
+    name: 夹具停用供货单位
+    status: disabled
+
+  # ---------- 存货与单位换算 ----------
+  article:bolt: # art_000001，编码 A00001；基本单位 PCS，采购单位 BOX
+    kind: article
+    name: 夹具用六角螺栓
+    spec: M8X40
+    grade: plain
+    base_measure: PCS
+    buy_measure: BOX
+    tax_rate: "0.13"
+  measure_link:bolt_box: # mlk_000001；1 BOX 折合 12 PCS
+    kind: measure_link
+    article: "article:bolt"
+    alt_measure: BOX
+    ratio: "12"
+  article:washer: # art_000002，编码 A00002；只有基本单位，采购单位缺省取基本单位
+    kind: article
+    name: 夹具用平垫圈
+    spec: M8
+    grade: fine
+    base_measure: PCS
+    tax_rate: "0.09"
+
+  # ---------- 已收足并自动关闭的订单 ----------
+  supply_order:fully_received: # so_000001；10 BOX 即 120 PCS，不含税单价 9.60
+    kind: supply_order
+    vendor: "vendor:main"
+    biz_date: month(-1).day(5)
+    need_date: month(-1).day(20)
+    price_includes_tax: false
+    status: approved # 下面的收料单审核后各行收足，引擎把它自动关闭
+    lines:
+      - { article: "article:bolt", measure: BOX, qty: "10", price: "9.60", tax_rate: "0.13" }
+  goods_entry:full: # ge_000001；按 BOX 收 10，qty_base 120，反写 linked_qty 120
+    kind: goods_entry
+    source: "supply_order:fully_received"
+    biz_date: month(-1).day(8)
+    status: approved
+    lines:
+      - { source_line: 1, entry_qty: "10", depot: D001 }
+
+  # ---------- 部分收料、仍可继续下推的订单 ----------
+  supply_order:partly_received: # so_000002；第 1 行 600 PCS，第 2 行 900 PCS
+    kind: supply_order
+    vendor: "vendor:main"
+    biz_date: month(-1).day(12)
+    need_date: month(0).day(5)
+    status: approved
+    lines:
+      - { article: "article:bolt", measure: PCS, qty: "600", price: "0.85", tax_rate: "0.13" }
+      - { article: "article:washer", qty: "900", price: "0.32" } # 单位与税率取缺省值
+  goods_entry:partial: # ge_000002；只收第 1 行 400，订单保持 approved
+    kind: goods_entry
+    source: "supply_order:partly_received"
+    biz_date: month(-1).day(18)
+    status: approved
+    lines:
+      - { source_line: 1, entry_qty: "400", depot: D001 }
+
+  # ---------- 手工关闭的订单 ----------
+  supply_order:closed_by_hand: # so_000003；没有收料，关闭方式为手工，可以 unclose
+    kind: supply_order
+    vendor: "vendor:spare"
+    biz_date: month(-1).day(22)
+    need_date: month(0).day(10)
+    status: closed
+    lines:
+      - { article: "article:washer", qty: "300", price: "0.30" }
+
+  # ---------- 费用单与按金额下推的付款单 ----------
+  fee_note:freight: # fn_000001；simple 单据，含税单价 1060，价税合计 1060
+    kind: fee_note
+    vendor: "vendor:main"
+    biz_date: month(-1).day(15)
+    due_date: month(0).day(15)
+    price_includes_tax: true
+    status: approved # simple 状态机只执行 approve
+    lines:
+      - { item_text: 上月干线运费, qty: "1", price: "1060", tax_rate: "0.06" }
+  pay_slip:freight_part: # ps_000001；付 530，反写费用单表头 linked_amount 530
+    kind: pay_slip
+    source: "fee_note:freight"
+    biz_date: month(-1).day(20)
+    status: approved # pay_mode 未映射也未写，取字段缺省值 transfer
+    lines:
+      - { source_line: 1, qty: "1", price: "530" }
+
+  # ---------- 出库与移库 ----------
+  issue_note:workshop: # isu_000001；out 方向，D001 六角螺栓 -100
+    kind: issue_note
+    depot: D001
+    taker: OP02 # 按编码引用共享数据中的库管员，不走 default_context
+    biz_date: month(-1).day(26)
+    status: approved
+    lines:
+      - { article: "article:bolt", measure: PCS, issue_qty: "100" }
+  stock_move:to_spare: # mv_000001；transfer 方向，D001 -60、D002 +60
+    kind: stock_move
+    from_depot: D001
+    to_depot: D002
+    biz_date: month(0).day(2)
+    status: approved
+    lines:
+      - { article: "article:bolt", measure: PCS, move_qty: "60" }
+
+  # ---------- 盘盈 ----------
+  count_sheet:gain: # cs_000001；adjust 方向，count_kind 为 gain，D002 平垫圈 +40
+    kind: count_sheet
+    depot: D002
+    count_kind: gain
+    biz_date: month(0).day(3)
+    status: approved
+    lines:
+      - { article: "article:washer", measure: PCS, diff_qty: "40" }
+
+  # ---------- 未完成的订单：已提交与草稿各一张 ----------
+  supply_order:waiting_approval: # so_000004；状态为 submitted，可以 unsubmit 或 approve
+    kind: supply_order
+    vendor: "vendor:main"
+    biz_date: this_week.mon
+    need_date: next_week.fri
+    status: submitted
+    lines:
+      - { article: "article:bolt", measure: BOX, qty: "5", price: "9.80", tax_rate: "0.13" }
+  supply_order:open_draft: # so_000005；未声明 status，保持 draft，可以 update 或 delete
+    kind: supply_order
+    vendor: "vendor:spare"
+    biz_date: today
+    need_date: today+14d
+    lines:
+      - { article: "article:washer", qty: "200", price: "0.31" }
+
+# 背景数据：再生成 12 个往来单位（ven_000004 起，编码 V0004 起），字段取 fx_base 的
+# seed/generators.yaml 所绑定的生成器值，不带别名（需求 20 第 4 条）。
+bulk:
+  - { kind: vendor, count: 12 }

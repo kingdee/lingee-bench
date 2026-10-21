@@ -1,0 +1,3 @@
+本镜像由 lg-bench 构建脚本在用户本机生成，包含 OpenCode CLI 平台二进制（npm 包 opencode-linux-*，MIT 许可，
+https://github.com/anomalyco/opencode）。该二进制从 npm registry 下载，并按 harness-lock.json 中的 integrity 校验。
+若要公开发布本镜像，须先补齐完整的第三方许可清单与 SBOM（二进制内含 Bun 运行时及其依赖）。

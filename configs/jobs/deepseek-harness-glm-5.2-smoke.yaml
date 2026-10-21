@@ -1,0 +1,29 @@
+# DeepSeek Harness（github.com/deepseek-ai/deepseek-harness）+ GLM-5.2，
+# headless profile，经 OpenAI Chat Completions 兼容端点（llm-pi-ai 自定义 provider）。
+# 状态：已跑通（2026-10-12，GLM-5.2 单题 reward=1）。token 取自 status 事件
+# phase==step_end 的 usage（逐步累加，见 adapter）；final 事件不带 usage。
+# 凭据通过 --env-file 提供 LG_OPENAI_BASE_URL / LG_OPENAI_API_KEY（只进入代理容器）。
+# dsh 为 developer preview，版本须固定；headless 无轮数上限参数，由 override_timeout_sec 约束。
+jobs_dir: jobs
+n_attempts: 1
+n_concurrent_trials: 1
+retry:
+  max_retries: 0
+environment:
+  type: docker
+  # 每个 trial 追加模型代理 sidecar；真实端点/密钥只进入代理容器（见 docs/harness-support.md）
+  extra_docker_compose:
+    - configs/compose/model-proxy.yaml
+    # deepseek-harness 只读挂载镜像（lg-bench harness build deepseek-harness）
+    - configs/compose/harness/deepseek-harness.yaml
+agents:
+  - import_path: lg_bench.agents.deepseek_harness:DeepSeekHarness
+    model_name: glm-5.2
+    override_timeout_sec: 600
+    override_setup_timeout_sec: 1800
+    kwargs:
+      # 只用预构建镜像安装；未构建时直接报错（不回退在线安装）
+      install_mode: image
+      version: "0.2.0-rc.2"
+tasks:
+  - path: examples/tasks/ap-three-way-match

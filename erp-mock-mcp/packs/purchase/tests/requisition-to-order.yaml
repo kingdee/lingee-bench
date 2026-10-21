@@ -1,0 +1,116 @@
+# 包级测试用例：下推 purchase_requisition_to_order 与反写
+# order_approve_writeback_requisition 的回放用例（需求 21 第 9 条）。
+#
+# setup 用 `status: approved` 的采购申请单做起点：构建时引擎依次执行 create、submit、approve
+# （需求 20 第 2 条）。本实例没有暴露申请单的提交与审核工具（M0 工具清单只有 search 与
+# create），所以已审核的申请单只能这样来——这也是真实实例里它的来源。
+#
+# 物料的采购单位是换算单位：1 BOX 折合 12 PCS，所以申请 20 BOX 的 qty_base 是 240，
+# 下推额度按基本单位计（需求 8 第 5 条）。
+#
+# 反写的效果（申请行 linked_qty 加上订单行的 qty_base）没有工具能读到：M0 工具清单里没有
+# purchase_requisition_get。每一步之后执行器都检查 INV-2，所以订单审核后申请行的 linked_qty
+# 必须等于已审核下游订单行的 qty_base 之和，反写没执行或算错都会在该步报出；
+# tests/packs/test_purchase_pack.py 另外直接读了那个字段。
+#
+# 内部 ID：共享数据先建，所以供应商为 sup_000001、物料为 mat_000001、换算关系为 ucv_000001、
+# 申请单为 preq_000001，它的第一行是 preq_000001-1（需求 4 第 2 条）。
+case: requisition-to-order
+anchor_date: 2026-10-09
+setup:
+  supplier:main:
+    kind: supplier
+    name: 下推用例专用轴承供应商
+    short_name: 下推轴承
+    payment_term_days: 45
+  material:boxed:
+    kind: material
+    name: 下推用例专用滚针轴承
+    spec: 下推用例规格 D20
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: BOX
+    tax_rate: "0.13"
+    standard_cost: "3.60"
+  unit_conversion:boxed:
+    kind: unit_conversion
+    material: "material:boxed"
+    from_unit: BOX
+    factor: "12"
+  purchase_requisition:asked:
+    kind: purchase_requisition
+    department: D001
+    applicant: E001
+    biz_date: month(0).day(1)
+    need_date: month(0).day(28)
+    status: approved
+    lines:
+      - { material: "material:boxed", unit: BOX, qty: "20" }
+steps:
+  # 下推 12 BOX：表头取 header_mapping（交货日期取申请单的需求日期），分录的物料与计量单位
+  # 取 line_mapping，数量与单价由调用方输入，税率取物料的缺省值（需求 8 第 1、2 条）。
+  # 申请单上没有供应商，所以订单的 supplier 为空值，下推不因必填字段为空而失败。
+  - call: purchase_order_create_from_requisition
+    args:
+      requisition_id: "$purchase_requisition:asked"
+      lines:
+        - { source_line_id: "$purchase_requisition:asked-1", qty: "12", price: "10.17" }
+    alias: purchase_order:ordered
+    expect:
+      result:
+        id: po_000001
+        status: draft
+        biz_date: "2026-10-09"
+        delivery_date: "2026-10-28"
+        supplier: null
+        price_includes_tax: true
+        amount: "108.00"
+        tax_amount: "14.04"
+        amount_with_tax: "122.04"
+        source_bill: { id: preq_000001 }
+        lines:
+          - line_no: 1
+            material: { id: mat_000001, code: M00001 }
+            unit: { id: unit_000002, code: BOX }
+            qty: "12"
+            qty_base: "144"
+            price: "10.17"
+            tax_rate: "0.13"
+            amount_with_tax: "122.04"
+            source_line_id: preq_000001-1
+  # 下推只生成草稿，源单的字段一个都没变（需求 8 第 12 条）；供应商要靠 update 补上才能提交。
+  # 由下推生成的草稿不接受 lines，这一步只改表头（需求 5 第 4 条）。
+  - call: purchase_order_update
+    args: { id: "$purchase_order:ordered", supplier_id: "$supplier:main" }
+    expect:
+      result:
+        status: draft
+        supplier: { id: sup_000001, code: S0001 }
+        delivery_date: "2026-10-28"
+  - call: purchase_order_submit
+    args: { id: "$purchase_order:ordered" }
+    expect: { result: { status: submitted } }
+  # 审核时执行反写：申请行的 linked_qty 加上本订单行的 144
+  - call: purchase_order_approve
+    args: { id: "$purchase_order:ordered" }
+    expect: { result: { status: approved } }
+  # 额度按占用计，占用统计全部未删除的下游单据：240 − 144 = 96 个基本单位，
+  # 再下推 9 BOX（108 个基本单位）超额，details 里会给出 pushable_qty（需求 8 第 5 条）
+  - call: purchase_order_create_from_requisition
+    args:
+      requisition_id: "$purchase_requisition:asked"
+      lines:
+        - { source_line_id: "$purchase_requisition:asked-1", qty: "9", price: "10.17" }
+    expect: { is_error: true, error_code: BUSINESS_RULE_VIOLATION, rule_id: R-GEN-005 }
+  # 刚好等于可下推额度时允许下推：8 BOX 正是剩下的 96 个基本单位
+  - call: purchase_order_create_from_requisition
+    args:
+      requisition_id: "$purchase_requisition:asked"
+      lines:
+        - { source_line_id: "$purchase_requisition:asked-1", qty: "8", price: "10.17" }
+    expect:
+      result:
+        id: po_000002
+        status: draft
+        lines:
+          - { line_no: 1, qty: "8", qty_base: "96", source_line_id: preq_000001-1 }

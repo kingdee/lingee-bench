@@ -1,0 +1,23 @@
+# standard 状态机、启用 pricing 的单据，是按数量下推收料单的来源（limit_by 为 qty）。
+# price_includes_tax 与分录 tax_rate 用同名字段为可写标准字段声明缺省（需求 1 第 5 条）。
+bill: supply_order
+label: { zh: 供货订单, en: Supply order }
+id_prefix: so
+number: { prefix: SPO }
+state_machine: standard
+pricing: true
+partner: { field: vendor_id }
+operations: [search, get, create, update, delete, submit, unsubmit, approve, unapprove, close, unclose]
+header:
+  vendor_id:          { type: ref, ref: vendor, label: { zh: 往来单位, en: Vendor }, required: true }
+  need_date:          { type: date, label: { zh: 需求日期, en: Required date }, required: true }
+  price_includes_tax: { label: { zh: 单价含税, en: Price includes tax }, default: false }
+lines:
+  article_id: { type: ref, ref: article, label: { zh: 存货, en: Article }, required: true }
+  measure_id: { type: ref, ref: measure, label: { zh: 计量单位, en: Measure }, default_from: article.buy_measure_id }
+  tax_rate:   { label: { zh: 税率, en: Tax rate }, default_from: article.tax_rate }
+line_quantity: { material_field: article_id, unit_field: measure_id }
+search:
+  keyword_fields: [number]
+  filters: [status, vendor_id, biz_date]
+  default_sort: [biz_date desc, number desc]

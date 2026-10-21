@@ -1,0 +1,9 @@
+# 由 `lg-bench harness compose pi` 生成，勿手改；随 docker/harness/harness-lock.json 更新。
+# 把预构建的 pi 只读镜像挂到 /opt/lg-harness/pi（镜像内文件位于根目录）。
+services:
+  main:
+    volumes:
+      - type: image
+        source: lg-bench/harness-pi:1.1.0-6586d34d1acd
+        target: /opt/lg-harness/pi
+        read_only: true

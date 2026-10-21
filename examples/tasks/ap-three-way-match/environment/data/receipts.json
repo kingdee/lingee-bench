@@ -1,0 +1,11 @@
+[
+  {"receipt_id":"R001","po_id":"PO001","quantity":4,"status":"accepted"},
+  {"receipt_id":"R002","po_id":"PO001","quantity":6,"status":"accepted"},
+  {"receipt_id":"R003","po_id":"PO002","quantity":5,"status":"accepted"},
+  {"receipt_id":"R004","po_id":"PO002","quantity":5,"status":"cancelled"},
+  {"receipt_id":"R005","po_id":"PO003","quantity":2,"status":"accepted"},
+  {"receipt_id":"R006","po_id":"PO004","quantity":1,"status":"accepted"},
+  {"receipt_id":"R007","po_id":"PO005","quantity":12,"status":"accepted"},
+  {"receipt_id":"R008","po_id":"PO006","quantity":10,"status":"accepted"},
+  {"receipt_id":"R009","po_id":"PO007","quantity":1,"status":"accepted"}
+]

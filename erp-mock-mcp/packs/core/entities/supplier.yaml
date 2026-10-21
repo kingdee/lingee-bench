@@ -1,0 +1,25 @@
+# 供应商：业务数据（shared 为 false），记录写在实例的初始数据集里，编码由引擎按 code
+# 声明生成（S0001、S0002……）。has_status 为 true，停用的供应商不得写入新单据（R-GEN-006，
+# 需求 5 第 7 条）。
+#
+# operations 生成 supplier_search 与 supplier_get，二者都在 M0 工具清单中
+# （example-p2p.md 第 9 节）。
+entity: supplier
+label: { zh: 供应商, en: Supplier }
+id_prefix: sup
+code: { prefix: S, digits: 4 }
+has_status: true
+operations: [search, get]
+search:
+  keyword_fields: [code, name, short_name]
+  filters: [status]
+  default_sort: [code]
+fields:
+  name:              { type: string, label: { zh: 名称, en: Name }, required: true }
+  short_name:        { type: string, label: { zh: 简称, en: Short name } }
+  payment_term_days: { type: int, label: { zh: 账期天数, en: Payment term days }, default: 30 }
+  default_tax_rate:
+    type: rate
+    label: { zh: 缺省税率, en: Default tax rate }
+    values: ["0", "0.06", "0.09", "0.13"]
+    default: "0.13"

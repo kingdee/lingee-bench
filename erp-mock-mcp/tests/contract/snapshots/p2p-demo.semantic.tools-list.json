@@ -1,0 +1,5394 @@
+{
+  "tools": [
+    {
+      "name": "business_context_get",
+      "description": "获取当前会话的业务上下文：业务日期、会计期间、缺省组织和当前用户。\n新建单据时不填业务日期和组织字段，服务按这里返回的值填充；如需查看一条基础资料或一张单据，请使用对应的 get 工具。\n前置条件：无，本工具不接受任何参数。\n副作用：无，只读，不改变沙箱中的数据。\n返回：business_date（业务日期，YYYY-MM-DD）、current_period（当前会计期间，YYYY-MM）、org（缺省组织，含 id、code、name）、user（当前用户，含 id、code、name）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "business_date": {
+            "type": "string"
+          },
+          "current_period": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "user": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "business_date",
+          "current_period",
+          "org",
+          "user"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "material_search",
+      "description": "按关键字、物料类型和状态分页检索物料，返回物料摘要。\n如需查看基本单位、采购单位、税率和单位换算关系，请使用 material_get。\n前置条件：无。\n副作用：无，只读。\n返回：items（每项含 id、code、name、status、spec、kind）、total、page、page_size、has_more；按 code 升序排列，id 为最后排序键。status 为 disabled 的物料不能写入新单据。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "关键字，按包含匹配 code、name 或 spec，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "raw",
+              "finished",
+              "goods"
+            ],
+            "description": "物料类型，raw 为原材料，finished 为产成品，goods 为商品；不填时返回全部类型"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "description": "状态，enabled 为启用，disabled 为停用；不填时返回全部状态"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从 1 开始；不填时为 1"
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页条数，1 到 100；不填时为 20"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "spec": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "code",
+                "name",
+                "status",
+                "spec",
+                "kind"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "has_more"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "material_get",
+      "description": "按内部 ID 获取单个物料的全部字段，以及它的全部单位换算关系。\n如需按名称、编码或规格型号查找物料，请使用 material_search。\n前置条件：id 由 material_search 返回。\n副作用：无，只读。\n返回：物料的 id、code、status、name、spec、kind、base_unit（基本单位，即时库存与分录的 qty_base 按它计量）、purchase_unit（采购单位，采购单据分录的计量单位缺省取它）、tax_rate、standard_cost，以及 unit_conversions 数组，每项含 from_unit 与 factor，表示 1 个 from_unit 折合 factor 个基本单位。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "物料的内部 ID，由 material_search 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spec": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "base_unit": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "purchase_unit": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "tax_rate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "standard_cost": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit_conversions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from_unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "factor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "from_unit",
+                "factor"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status",
+          "name",
+          "spec",
+          "kind",
+          "base_unit",
+          "purchase_unit",
+          "tax_rate",
+          "standard_cost",
+          "unit_conversions"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "supplier_search",
+      "description": "按关键字和状态分页检索供应商，返回供应商摘要。\n如需查看账期天数和缺省税率，请使用 supplier_get。\n前置条件：无。\n副作用：无，只读。\n返回：items（每项含 id、code、name、status、short_name）、total、page、page_size、has_more；按 code 升序排列，id 为最后排序键。status 为 disabled 的供应商不能写入新单据。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "关键字，按包含匹配 code、name 或 short_name，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "description": "状态，enabled 为启用，disabled 为停用；不填时返回全部状态"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从 1 开始；不填时为 1"
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页条数，1 到 100；不填时为 20"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "short_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "code",
+                "name",
+                "status",
+                "short_name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "has_more"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "supplier_get",
+      "description": "按内部 ID 获取单个供应商的全部字段。\n如需按名称、编码或简称查找供应商，请使用 supplier_search。\n前置条件：id 由 supplier_search 返回。\n副作用：无，只读。\n返回：供应商的 id、code、status、name、short_name、payment_term_days（账期天数）和 default_tax_rate（缺省税率）。default_tax_rate 只是供应商自身的属性，采购单据分录的税率缺省取物料的 tax_rate。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "供应商的内部 ID，由 supplier_search 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "short_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_term_days": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "default_tax_rate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status",
+          "name",
+          "short_name",
+          "payment_term_days",
+          "default_tax_rate"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "warehouse_search",
+      "description": "按关键字和状态分页检索仓库，返回仓库摘要。\n需要填写仓库的单据，在调用写工具之前用它取得仓库的内部 ID；本业务包不提供按内部 ID 获取单个仓库的工具，仓库的全部字段就是摘要里的这四项。\n前置条件：无。\n副作用：无，只读。\n返回：items（每项含 id、code、name、status）、total、page、page_size、has_more；按 code 升序排列，id 为最后排序键。status 为 disabled 的仓库不能写入新单据。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "关键字，按包含匹配 code 或 name，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "description": "状态，enabled 为启用，disabled 为停用；不填时返回全部状态"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从 1 开始；不填时为 1"
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页条数，1 到 100；不填时为 20"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "code",
+                "name",
+                "status"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "has_more"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_search",
+      "description": "按关键字、状态、供应商和业务日期范围分页检索采购订单，返回单据摘要。\n如需一张订单的全部字段、分录和各行已入库数量，请使用 purchase_order_get。\n前置条件：无。\n副作用：无，只读。\n返回：items（每项含 id、number、status、biz_date、supplier、amount_with_tax）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。摘要不含分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "approved",
+              "closed"
+            ],
+            "description": "状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；只有 approved 的订单可以下推采购入库单；不填时返回全部状态"
+          },
+          "supplier_id": {
+            "type": "string",
+            "description": "供应商的内部 ID，由 supplier_search 返回；不填时不按供应商过滤"
+          },
+          "date_from": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期"
+          },
+          "date_to": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从 1 开始；不填时为 1"
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页条数，1 到 100；不填时为 20"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "biz_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "supplier": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "number",
+                "status",
+                "biz_date",
+                "supplier",
+                "amount_with_tax"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "has_more"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_get",
+      "description": "按内部 ID 获取单张采购订单的表头全部字段和全部分录，含每行的已入库数量。\n如需按编号、供应商或业务日期范围查找订单，请使用 purchase_order_search；如需历史成交单价，请使用 purchase_price_query。\n前置条件：id 由 purchase_order_search 返回。\n副作用：无，只读。\n返回：表头的 id、number、status、biz_date、supplier、delivery_date、price_includes_tax、三个金额字段与 remark，以及按 line_no 升序的分录，每项含 line_no、material、unit、qty、qty_base、price、tax_rate、三个金额字段和 linked_qty。某行可入库数量为 qty_base 减去已被入库单（含草稿）占用的数量。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "采购订单的内部 ID，由 purchase_order_search 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "delivery_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "linked_qty",
+                "material",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_create",
+      "description": "新建采购订单草稿，向供应商订购物料。\n如需按已审核的采购申请单订货，请使用 purchase_order_create_from_requisition；如需登记到货入库，请使用 purchase_receipt_create_from_order。\n前置条件：供应商与物料为启用状态；交货日期不得早于业务日期；每行的计量单位是该物料的基本单位，或该物料的某个换算单位。\n副作用：只生成 draft 草稿，不改变库存；提交并审核后才能下推采购入库单。\n返回：新建后的订单，含 id、number、status、各金额字段和全部分录，每行附 qty_base 与 linked_qty。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "supplier_id": {
+            "type": "string",
+            "description": "供应商的内部 ID，由 supplier_search 返回"
+          },
+          "delivery_date": {
+            "type": "string",
+            "format": "date",
+            "description": "要求交货日期，YYYY-MM-DD；不得早于业务日期"
+          },
+          "biz_date": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get"
+          },
+          "price_includes_tax": {
+            "type": "boolean",
+            "description": "单价是否含税，true 时按含税单价反算不含税金额；不填时为 true"
+          },
+          "remark": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "备注；不填时为空"
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "订单分录数组，1 到 200 个元素",
+            "items": {
+              "type": "object",
+              "properties": {
+                "material_id": {
+                  "type": "string",
+                  "description": "物料的内部 ID，由 material_search 返回"
+                },
+                "unit_id": {
+                  "type": "string",
+                  "description": "计量单位的内部 ID，取自 material_get 返回的 base_unit、purchase_unit 或 unit_conversions 中的 from_unit；不填时取该物料的采购单位"
+                },
+                "tax_rate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "税率，不小于 0，最多 4 位小数；不填时取该物料的 tax_rate，物料税率见 material_get"
+                },
+                "qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "数量，大于 0，最多 4 位小数；单位见 unit_id，按换算关系折成基本单位后作为可入库数量"
+                },
+                "price": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "单价，不小于 0，最多 6 位小数；是否含税由表头 price_includes_tax 决定"
+                }
+              },
+              "required": [
+                "material_id",
+                "qty",
+                "price"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "supplier_id",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "delivery_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "linked_qty",
+                "material",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_update",
+      "description": "修改采购订单草稿的表头字段与分录。\n如需提交该草稿，请使用 purchase_order_submit。\n前置条件：单据状态为 draft，id 由 purchase_order_search 返回；修改后交货日期不得早于业务日期。\n副作用：提供 lines 时整体替换原分录并从 1 起重排行号；未提供的可写表头字段保持原值；只修改 price_includes_tax 时全部金额按新口径重算。由采购申请单下推生成的草稿不接受 lines，只能改表头，缺少的供应商就是这样补上的。\n返回：修改后的订单，含表头全部字段和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "采购订单的内部 ID，由 purchase_order_search 返回"
+          },
+          "supplier_id": {
+            "type": "string",
+            "description": "供应商的内部 ID，由 supplier_search 返回；不填时保持原值"
+          },
+          "delivery_date": {
+            "type": "string",
+            "format": "date",
+            "description": "要求交货日期，YYYY-MM-DD，不得早于业务日期；不填时保持原值"
+          },
+          "biz_date": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期，YYYY-MM-DD；不填时保持原值。单据编号按新建时的业务日期分配，改期不改编号"
+          },
+          "price_includes_tax": {
+            "type": "boolean",
+            "description": "单价是否含税；不填时保持原值"
+          },
+          "remark": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "备注；不填时保持原值"
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "订单分录数组，1 到 200 个元素；不填时原分录保持不变；由采购申请单下推生成的草稿不接受本参数",
+            "items": {
+              "type": "object",
+              "properties": {
+                "material_id": {
+                  "type": "string",
+                  "description": "物料的内部 ID，由 material_search 返回"
+                },
+                "unit_id": {
+                  "type": "string",
+                  "description": "计量单位的内部 ID，取自 material_get 返回的 base_unit、purchase_unit 或 unit_conversions 中的 from_unit；不填时取该物料的采购单位"
+                },
+                "tax_rate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "税率，不小于 0，最多 4 位小数；不填时取该物料的 tax_rate"
+                },
+                "qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "数量，大于 0，最多 4 位小数；单位见 unit_id"
+                },
+                "price": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "单价，不小于 0，最多 6 位小数；是否含税由表头 price_includes_tax 决定"
+                }
+              },
+              "required": [
+                "material_id",
+                "qty",
+                "price"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "delivery_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "linked_qty",
+                "material",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_submit",
+      "description": "提交采购订单，使状态由 draft 变为 submitted。\n如需审核该订单，请使用 purchase_order_approve。\n前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含供应商、交货日期和每行的物料、计量单位、数量、单价、税率）都有值；交货日期不得早于业务日期。\n副作用：只改变单据状态，不改变库存，也不反写采购申请单。本实例没有撤回提交的工具，提交后只能继续审核。\n返回：提交后的订单，含表头全部字段和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "采购订单的内部 ID，由 purchase_order_search 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "delivery_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "linked_qty",
+                "material",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_approve",
+      "description": "审核采购订单，使状态由 submitted 变为 approved，之后可以按行下推采购入库单。\n如需关闭不再继续入库的订单，请使用 purchase_order_close。\n前置条件：单据状态为 submitted。\n副作用：本单据没有库存联动，审核不改变库存。由采购申请单下推生成时，把每行的 qty_base 累加到来源申请行的 linked_qty。审核后各行可入库数量等于 qty_base 减去已被入库单占用的数量。本实例没有反审核的工具。\n返回：审核后的订单，含表头全部字段和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "采购订单的内部 ID，由 purchase_order_search 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "delivery_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "linked_qty",
+                "material",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_close",
+      "description": "关闭采购订单，使状态由 approved 变为 closed，表示不再继续入库。\n如需查看各行已入库数量，请使用 purchase_order_get。\n前置条件：单据状态为 approved。\n副作用：只改变单据状态，不改变库存与已入库数量；关闭方式记为手工关闭，关闭后不能再下推采购入库单。各行都入足时订单会自动关闭，不必调用本工具。本实例没有反关闭的工具，关闭不可撤销。\n返回：关闭后的订单，含表头全部字段和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "采购订单的内部 ID，由 purchase_order_search 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "delivery_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "linked_qty",
+                "material",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_receipt_submit",
+      "description": "提交采购入库单，使状态由 draft 变为 submitted。\n如需审核该入库单，请使用 purchase_receipt_approve。\n前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含供应商和每行的物料、计量单位、数量、单价、税率、入库仓库）都有值；下推生成的草稿这些字段都已齐备。\n副作用：只改变单据状态，不改变库存，也不反写采购订单。本实例没有入库单的检索与详情工具，id 只出现在 purchase_receipt_create_from_order 的返回中。\n返回：提交后的入库单，含表头全部字段和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "采购入库单的内部 ID，由 purchase_receipt_create_from_order 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "warehouse": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "material",
+                "unit",
+                "warehouse"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_receipt_approve",
+      "description": "审核采购入库单，使状态由 submitted 变为 approved，货物入账。\n如需查看来源订单各行的已入库数量，请使用 purchase_order_get。\n前置条件：单据状态为 submitted。\n副作用：为每行写一条库存流水，按 qty_base 增加（物料，入库仓库）的即时库存；把每行的 qty_base 累加到来源订单行的 linked_qty，订单各行都入足后自动关闭订单。本实例没有反审核的工具，审核不可撤销。\n返回：审核后的入库单，含表头全部字段和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "采购入库单的内部 ID，由 purchase_receipt_create_from_order 返回"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "warehouse": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "material",
+                "unit",
+                "warehouse"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_requisition_search",
+      "description": "按关键字、状态、申请部门和业务日期范围分页检索采购申请单，返回单据摘要。\n如需按已审核的申请单订货，请使用 purchase_order_create_from_requisition。\n前置条件：无。\n副作用：无，只读。\n返回：items（每项含 id、number、status、biz_date、department）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。摘要不含分录，本实例也没有采购申请单的详情工具，所以申请分录的 ID 与数量无法通过工具读到。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "approved",
+              "closed"
+            ],
+            "description": "状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；只有 approved 的申请单可以下推采购订单；不填时返回全部状态"
+          },
+          "department_id": {
+            "type": "string",
+            "description": "申请部门的内部 ID，形如 dept_000001，可从本工具返回的 department.id 取得；不填时不按申请部门过滤"
+          },
+          "date_from": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期"
+          },
+          "date_to": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从 1 开始；不填时为 1"
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页条数，1 到 100；不填时为 20"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "biz_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "department": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "number",
+                "status",
+                "biz_date",
+                "department"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "has_more"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_requisition_create",
+      "description": "新建采购申请单草稿，登记一个部门对物料的采购需求。\n如需直接向供应商订货，请使用 purchase_order_create。\n前置条件：物料为启用状态；每行的计量单位是该物料的基本单位，或该物料的某个换算单位。\n副作用：只生成 draft 草稿，不改变库存，也不产生任何采购订单。本实例没有采购申请单的提交与审核工具，本工具建出的草稿不能继续流转；可以下推订单的已审核申请单由服务预置。\n返回：新建后的申请单，含 id、number、status、表头字段和全部分录，每行附 qty_base（基本单位数量）与 linked_qty（已订货的基本单位数量）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "department_id": {
+            "type": "string",
+            "description": "申请部门的内部 ID，形如 dept_000001，可从 purchase_requisition_search 返回的 department.id 取得；本实例没有部门检索工具"
+          },
+          "applicant_id": {
+            "type": "string",
+            "description": "申请人的内部 ID；不填时取当前用户，当前用户见 business_context_get"
+          },
+          "need_date": {
+            "type": "string",
+            "format": "date",
+            "description": "需求日期，YYYY-MM-DD；由本申请单下推采购订单时，它会成为订单的交货日期"
+          },
+          "biz_date": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get"
+          },
+          "remark": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "备注；不填时为空"
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "申请分录数组，1 到 200 个元素",
+            "items": {
+              "type": "object",
+              "properties": {
+                "material_id": {
+                  "type": "string",
+                  "description": "物料的内部 ID，由 material_search 返回"
+                },
+                "unit_id": {
+                  "type": "string",
+                  "description": "计量单位的内部 ID，取自 material_get 返回的 base_unit、purchase_unit 或 unit_conversions 中的 from_unit；不填时取该物料的采购单位"
+                },
+                "qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "申请数量，大于 0，最多 4 位小数；单位见 unit_id，按换算关系折成基本单位后作为可订货数量"
+                }
+              },
+              "required": [
+                "material_id",
+                "qty"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "department_id",
+          "need_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "department": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "applicant": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "need_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty_base",
+                "linked_qty",
+                "material",
+                "unit",
+                "qty"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "department",
+          "applicant",
+          "need_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_receipt_create_from_order",
+      "description": "按已审核的采购订单生成采购入库单草稿，逐行登记本次入库的数量与仓库。\n如需处理盘点差异，请使用 stock_adjustment_create；如需查看订单各行可入库数量，请使用 purchase_order_get。\n前置条件：订单状态为 approved，order_id 由 purchase_order_search 返回，source_line_id 属于该订单；每个订单行本次入库的基本单位数量合计不超过它的可入库数量；仓库为启用状态。\n副作用：只生成 draft 草稿，不改变库存与订单的任何字段；供应商、单价口径、单价与税率都取自订单。本实例没有入库单的删除工具，建错的草稿会一直占用订单行的可入库数量。\n返回：新建后的入库单，含 id、number、status 和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "description": "来源采购订单的内部 ID，由 purchase_order_search 返回"
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "入库分录数组，1 到 200 个元素；同一订单行可以分多行入不同仓库",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_line_id": {
+                  "type": "string",
+                  "maxLength": 100,
+                  "description": "来源订单分录的 ID，形如 `<订单 ID>-<行号>`，由 purchase_order_get 返回"
+                },
+                "qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "入库数量，大于 0，最多 4 位小数；单位取自订单行的计量单位，按换算关系折成基本单位后计入库存"
+                },
+                "warehouse_id": {
+                  "type": "string",
+                  "description": "入库仓库的内部 ID，由 warehouse_search 返回"
+                }
+              },
+              "required": [
+                "source_line_id",
+                "qty",
+                "warehouse_id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "order_id",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "warehouse": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "material",
+                "unit",
+                "warehouse"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_order_create_from_requisition",
+      "description": "按已审核的采购申请单生成采购订单草稿，逐行登记本次订货的数量与单价。\n如需新建与申请单无关的订单，请使用 purchase_order_create。\n前置条件：申请单状态为 approved，requisition_id 由 purchase_requisition_search 返回；每个申请行本次订货的基本单位数量合计不超过它的可订货数量。本实例没有采购申请单的详情工具，source_line_id 无法通过工具读到，只能按它的形式拼出来。\n副作用：只生成 draft 草稿，不改变申请单的任何字段。订单的交货日期取申请单的需求日期，供应商为空，要先用 purchase_order_update 补上才能提交；审核后才反写申请行的 linked_qty。\n返回：新建后的订单，含 id、number、status、各金额字段和全部分录。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requisition_id": {
+            "type": "string",
+            "description": "来源采购申请单的内部 ID，由 purchase_requisition_search 返回"
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "订单分录数组，1 到 200 个元素；每项对应一个申请分录，同一申请分录可以出现多次",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_line_id": {
+                  "type": "string",
+                  "maxLength": 100,
+                  "description": "来源申请分录的 ID，形如 `<申请单 ID>-<行号>`，行号按分录顺序从 1 起"
+                },
+                "qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "数量，大于 0，最多 4 位小数；单位取自申请行的计量单位，按换算关系折成基本单位后计入可订货数量"
+                },
+                "price": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "单价，不小于 0，最多 6 位小数；下推生成的订单 price_includes_tax 为 true，所以这里填含税单价"
+                }
+              },
+              "required": [
+                "source_line_id",
+                "qty",
+                "price"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "requisition_id",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "price_includes_tax": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_with_tax": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "delivery_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_rate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amount_with_tax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linked_qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty",
+                "qty_base",
+                "price",
+                "tax_rate",
+                "amount",
+                "tax_amount",
+                "amount_with_tax",
+                "linked_qty",
+                "material",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "price_includes_tax",
+          "amount",
+          "tax_amount",
+          "amount_with_tax",
+          "supplier",
+          "delivery_date",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "purchase_price_query",
+      "description": "查询某个供应商与某个物料的最近成交单价，以及最近几次的单价记录。\n如需一张订单的全部字段与分录，请使用 purchase_order_get。\n前置条件：无。\n副作用：无，只读。\n返回：latest 为最近一张已审核或已关闭采购订单中该物料的 price、price_includes_tax、biz_date 和 number；history 为最近至多 5 次的 price、biz_date 和 number，按业务日期降序、编号降序排列。草稿与已提交的订单不计入。没有成交记录时 latest 为 null，history 为空数组。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "supplier_id": {
+            "type": "string",
+            "description": "供应商的内部 ID，由 supplier_search 返回"
+          },
+          "material_id": {
+            "type": "string",
+            "description": "物料的内部 ID，由 material_search 返回"
+          }
+        },
+        "required": [
+          "supplier_id",
+          "material_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "latest": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "price": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "price_includes_tax": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "biz_date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "price",
+              "price_includes_tax",
+              "biz_date",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "biz_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "number": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "price",
+                "biz_date",
+                "number"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "latest",
+          "history"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "stock_adjustment_create",
+      "description": "新建库存调整单草稿，登记一个仓库盘点后的盘盈或盘亏差异数量。\n库存调整单只用于盘点差异，采购到货必须通过采购入库单入库。\n前置条件：物料与仓库为启用状态，全部分录都在表头的仓库中调整。\n副作用：只生成 draft 草稿，不改变即时库存；提交并审核后才按表头的调整原因增减库存，本业务包不提供提交与审核工具。\n返回：新建后的库存调整单，含 id、number、status、表头全部字段和全部分录，每行附基本单位数量 qty_base。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "warehouse_id": {
+            "type": "string",
+            "description": "仓库的内部 ID，由 warehouse_search 返回；一张单据只调整一个仓库"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "gain",
+              "loss"
+            ],
+            "description": "调整原因，gain 为盘盈（审核后增加库存），loss 为盘亏（审核后减少库存）；一张单据只能是其中一种"
+          },
+          "biz_date": {
+            "type": "string",
+            "format": "date",
+            "description": "业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get"
+          },
+          "remark": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "备注；不填时为空"
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "调整分录数组，1 到 200 个元素",
+            "items": {
+              "type": "object",
+              "properties": {
+                "material_id": {
+                  "type": "string",
+                  "description": "物料的内部 ID，由 material_search 返回"
+                },
+                "unit_id": {
+                  "type": "string",
+                  "description": "计量单位的内部 ID；不填时取该物料的基本单位，库存按基本单位记账"
+                },
+                "qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "调整数量，大于 0，最多 4 位小数；单位见 unit_id，按物料的换算关系折成基本单位后增减库存，盘盈还是盘亏由表头的 reason 决定"
+                }
+              },
+              "required": [
+                "material_id",
+                "qty"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "warehouse_id",
+          "reason",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "bill_type": {
+            "type": "string"
+          },
+          "org": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "biz_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "source_bill_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_bill": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_seq": {
+            "type": "integer"
+          },
+          "updated_seq": {
+            "type": "integer"
+          },
+          "warehouse": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "line_no": {
+                  "type": "integer"
+                },
+                "source_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "qty_base": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "qty": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "line_no",
+                "source_line_id",
+                "qty_base",
+                "material",
+                "unit",
+                "qty"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "bill_type",
+          "org",
+          "biz_date",
+          "status",
+          "source_bill_type",
+          "source_bill",
+          "remark",
+          "created_seq",
+          "updated_seq",
+          "warehouse",
+          "reason",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "inventory_balance_query",
+      "description": "分页查询（物料，仓库）的即时库存，数量以基本单位计。\n如需查看物料的基本单位与单位换算关系，请使用 material_get；如需按名称或编码查找仓库，请使用 warehouse_search。\n前置条件：无。\n副作用：无，只读。\n返回：items（每项含物料引用、仓库引用、物料的基本单位引用和即时库存数量 qty_base）、total、page、page_size、has_more；按物料 ID、再按仓库 ID 升序排列。只返回有库存流水的（物料，仓库），数量为 0 的记录同样返回。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "description": "物料的内部 ID，由 material_search 返回；不填时返回全部物料"
+          },
+          "warehouse_id": {
+            "type": "string",
+            "description": "仓库的内部 ID，由 warehouse_search 返回；不填时返回全部仓库"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从 1 开始；不填时为 1"
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页条数，1 到 100；不填时为 20"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "material": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "warehouse": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "base_unit": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "qty_base": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "material",
+                "warehouse",
+                "base_unit",
+                "qty_base"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "has_more"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}

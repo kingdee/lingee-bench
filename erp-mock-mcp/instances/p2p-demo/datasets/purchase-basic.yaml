@@ -1,0 +1,186 @@
+# purchase-basic：p2p-demo 唯一的初始数据集（seed-data.md 第 2 节，需求 20 第 1 条）。
+# 供应商、物料、单位换算和若干历史采购单据，够演示"检索基础资料 → 下订单 → 入库 → 查库存"
+# 这条主线（example-p2p.md 第 8 节）。
+#
+# 构建顺序（需求 20 第 17 条）：先建 include_shared 所列业务包的共享基础数据，再按书写顺序建
+# entities，最后按列表顺序 bulk 批量生成。include_shared 只写 core：purchase 与 inventory 没有
+# 共享基础数据，组织、部门、员工、计量单位和仓库都由 core 的 seed/shared/ 提供。
+#
+# 单据由引擎按正常操作生成，不直接写表（需求 20 第 2 条）：声明了 source 的经下推生成，否则新建；
+# 再按 status 执行操作，standard 单据的 submitted 为 submit，approved 为 submit、approve，
+# closed 再执行 close（记为手工关闭）。库存流水、即时库存、反写数量和自动关闭都由引擎算出来，
+# 所以数据集里没有 linked_qty、qty_base 和库存数量这类只读值。
+#
+# 写法（需求 20 第 16 条）：
+#   - 键是别名 `<kind>:<名称>`，别名先声明后引用，构建后输出别名到内部 ID 的映射文件，
+#     上层使用方按别名引用数据（需求 20 第 10 条）。
+#   - ref 字段去掉 _id 书写：值为别名时引用该记录，否则按编码引用已创建的记录（如 unit: BOX）。
+#   - 名为 kind 的字段写成 `<kind 值>_kind`，即物料的 material_kind。
+#   - 小数一律是文本；日期一律写成相对锚点日期的表达式。
+#   - 下推生成的单据写 source（来源单据的别名），分录用 source_line 写来源行号，并且不再写
+#     header_mapping 已映射的表头字段（入库单的 supplier 与 price_includes_tax）。
+#
+# 为什么任意锚点日期都能构建（需求 21 第 12 条）：日期只用下面这几种表达式，每一种在 2000-01-01
+# 到 2099-12-31 的任意锚点日期下都落在日历内（day(D) 超过当月天数时取末日），而且相互的先后关系
+# 与锚点日期无关——
+#   month(-1).day(D)  上月第 D 日，恒在上月内，所以恒早于锚点日期（历史单据）；
+#   month(0).day(D)   锚点月第 D 日，恒在锚点月内，所以恒晚于任一 month(-1).day(D)；
+#   month(0).start    锚点月首日，恒不晚于锚点日期；
+#   this_week.mon     锚点日期所在周的周一，恒不晚于锚点日期；
+#   next_week.fri     恒比 this_week.mon 晚 11 天；
+#   today、today+Nd   锚点日期当天与其后第 N 天。
+# R-PUR-001（交货日期不得早于业务日期）在 create、update、submit 时求值，所以四张采购订单的两个
+# 日期按这三种方式配对：上月的业务日期配锚点月的交货日期（两张）、this_week.mon 配 next_week.fri、
+# today 配 today+14d。采购申请单的需求日期写成 today+10d，恒在锚点日期之后：它由 header_mapping
+# 带入下推所得订单的交货日期，而下推生成也走 create，需求日期早于下推当天的业务日期就会以
+# VALIDATION_FAILED 结束。
+#
+# 构建后的期初状态（以锚点日期 a 表示）：
+#   即时库存   WH01 演示盒装螺母 144（入库 6 BOX × 24）；WH02 演示盒装螺母 60、演示平垫圈 200
+#   采购申请   preq_000001 已审核，两行都未订货，需求日期 a+10 天，可下推采购订单
+#   采购订单   po_000001 已审核，第 1 行入库 144/480、第 2 行未入库，保持 approved，可继续入库；
+#              po_000002 手工关闭；po_000003 已提交；po_000004 为草稿
+#   采购入库单 prcv_000001 已审核，为 po_000001 第 1 行入库 6 BOX
+#   库存调整单 sadj_000001 已审核，盘盈两行
+#   停用资料   sup_000003 与 mat_000003 的 status 为 disabled，写入新单据时违反 R-GEN-006
+#
+# 写死的名称都带"演示"二字，与两处文本都不重合：
+#   - 工具描述里不得出现初始数据集中实体记录的名称、编码和单据编号（需求 3 第 5 条），加载第 8 步
+#     之后会逐一比对，所以这里不用任何在描述中出现过的词；
+#   - packs/core/seed/examples/basic-data.yaml 里的示例名称（"示例"二字开头）留给工具描述举例，
+#     本数据集一概不用。
+# 编码不必回避：供应商、物料、仓库、部门、员工的编码都由引擎按 code 声明生成，数据集不写编码。
+dataset: purchase-basic
+version: 1.0.0
+# 随机种子：固定值，只影响带 gen 的字段和 bulk 记录；写死的值、全部内部 ID 和别名映射都不随它
+# 变化（需求 20 第 3 条）。
+random_seed: 20260301
+include_shared: [core]
+# 上月仍未结账，所以下面落在 month(-1) 的历史单据都在未结账期间内（seed-data.md 第 4 节）。
+periods: { closed_before: "month(-1)" }
+# 当前用户不在这里声明，取 instance.yaml 的 current_user（emp_000001，需求 20 第 5 条）：
+# 它是采购申请单 applicant_id 的 default_context user 缺省值。
+entities:
+  # ---------- 供应商 ----------
+  supplier:main: # sup_000001，编码 S0001；四个字段都写死，不用生成器
+    kind: supplier
+    name: 演示标准件供货商
+    short_name: 演示标准件
+    payment_term_days: 45
+    default_tax_rate: "0.13"
+  supplier:spare: # sup_000002，编码 S0002；账期与缺省税率取字段缺省值（30、0.13）
+    kind: supplier
+    name: 演示轴承供货商
+    short_name: 演示轴承
+  supplier:retired: # sup_000003，编码 S0003；停用的供应商，写进新单据时违反 R-GEN-006
+    kind: supplier
+    name: 演示停用供货商
+    status: disabled
+
+  # ---------- 物料与单位换算 ----------
+  material:boxed: # mat_000001，编码 M00001；采购单位 BOX 与基本单位 PCS 不同
+    kind: material
+    name: 演示盒装螺母
+    spec: M8X1P25
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: BOX
+    tax_rate: "0.13"
+    standard_cost: "0.42"
+  unit_conversion:boxed_box: # ucv_000001；1 BOX 折合 24 PCS，采购单据按 BOX 下单、按 PCS 记账
+    kind: unit_conversion
+    material: "material:boxed"
+    from_unit: BOX
+    factor: "24"
+  material:plain: # mat_000002，编码 M00002；只有基本单位，采购单位缺省取基本单位
+    kind: material
+    name: 演示平垫圈
+    spec: M8
+    material_kind: raw
+    base_unit: PCS
+    tax_rate: "0.09"
+    standard_cost: "0.08"
+  material:retired: # mat_000003，编码 M00003；停用的物料，写进新单据时违反 R-GEN-006
+    kind: material
+    name: 演示停用衬套
+    spec: D20
+    material_kind: raw
+    base_unit: PCS
+    status: disabled
+
+  # ---------- 已审核、未订货的采购申请单 ----------
+  purchase_requisition:open: # preq_000001；申请人取 default_context user（emp_000001）
+    kind: purchase_requisition
+    department: D001
+    biz_date: month(0).start
+    need_date: today+10d # 恒在锚点日期之后，所以任意锚点日期下都能下推采购订单
+    status: approved # 引擎依次执行 submit 与 approve，这两个工具不在 M0 工具清单中
+    lines:
+      - { material: "material:boxed", unit: BOX, qty: "15" }
+      - { material: "material:plain", qty: "800" } # 计量单位取该物料的采购单位（PCS）
+
+  # ---------- 部分入库、仍可继续入库的采购订单 ----------
+  purchase_order:partly_received: # po_000001；第 1 行 20 BOX 即 480 PCS，第 2 行 500 PCS
+    kind: purchase_order
+    supplier: "supplier:main"
+    biz_date: month(-1).day(12)
+    delivery_date: month(0).day(10) # 本月任一日恒晚于上月任一日，满足 R-PUR-001
+    price_includes_tax: false
+    status: approved
+    lines:
+      - { material: "material:boxed", unit: BOX, qty: "20", price: "10.08", tax_rate: "0.13" }
+      - { material: "material:plain", qty: "500", price: "0.08" } # 税率取物料的 tax_rate（0.09）
+  purchase_receipt:history: # prcv_000001；只入第 1 行 6 BOX，订单保持 approved
+    kind: purchase_receipt
+    source: "purchase_order:partly_received"
+    biz_date: month(-1).day(20)
+    status: approved # 审核后写库存流水，并把 144 反写到订单第 1 行的 linked_qty
+    lines:
+      - { source_line: 1, qty: "6", warehouse: WH01 }
+
+  # ---------- 手工关闭的采购订单：给采购价格查询留一条历史成交记录 ----------
+  purchase_order:closed_by_hand: # po_000002；没有入库，关闭方式为手工
+    kind: purchase_order
+    supplier: "supplier:spare"
+    biz_date: month(-1).day(22)
+    delivery_date: month(0).day(5)
+    status: closed
+    lines:
+      - { material: "material:plain", qty: "300", price: "0.10" } # 含税单价，口径取缺省值 true
+
+  # ---------- 未完成的采购订单：已提交与草稿各一张 ----------
+  purchase_order:waiting_approval: # po_000003；状态为 submitted，可以 approve
+    kind: purchase_order
+    supplier: "supplier:main"
+    biz_date: this_week.mon
+    delivery_date: next_week.fri # 恒比 this_week.mon 晚 11 天
+    status: submitted
+    lines:
+      - { material: "material:boxed", unit: BOX, qty: "10", price: "10.20" }
+  purchase_order:open_draft: # po_000004；未声明 status，保持 draft，可以 update 或 submit
+    kind: purchase_order
+    supplier: "supplier:spare"
+    biz_date: today
+    delivery_date: today+14d
+    lines:
+      - { material: "material:plain", qty: "200", price: "0.10" }
+
+  # ---------- 盘盈：让即时库存不止一个仓库、一个物料 ----------
+  stock_adjustment:gain: # sadj_000001；adjust 方向，reason 为 gain，WH02 两个物料各加一笔
+    kind: stock_adjustment
+    warehouse: WH02
+    reason: gain
+    biz_date: month(0).start
+    status: approved # 引擎依次执行 submit 与 approve，这两个工具不在 M0 工具清单中
+    lines:
+      - { material: "material:boxed", qty: "60" } # 计量单位取该物料的基本单位（PCS）
+      - { material: "material:plain", qty: "200" }
+
+# 背景数据（需求 20 第 4 条）：再生成 24 个供应商（sup_000004 起）和 20 个物料（mat_000004 起），
+# 字段取 packs/core/seed/generators.yaml 所绑定的生成器值，没有绑定生成器的字段取缺省值
+# （物料的基本单位取 entities/material.yaml 中的 default，即 PCS），这些记录不带别名。
+# 两个数量都让检索结果超过缺省每页 20 条，又都远小于生成器的取值空间：material.name 的
+# code_words 从 6 个词里取 2 到 3 个，共 35 种组合，重名会被丢弃并重新生成（需求 20 第 7 条）。
+bulk:
+  - { kind: supplier, count: 24 }
+  - { kind: material, count: 20 }

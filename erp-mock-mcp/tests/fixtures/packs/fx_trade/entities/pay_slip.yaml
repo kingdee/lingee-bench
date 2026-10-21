@@ -1,0 +1,26 @@
+# 费用单按金额下推的目标单据：pricing 为 true，qty 与 price 由调用方逐行输入，
+# 审核时把表头 amount_with_tax 反写到源单表头的 linked_amount。
+bill: pay_slip
+label: { zh: 付款单, en: Pay slip }
+id_prefix: ps
+number: { prefix: PAY }
+state_machine: standard
+pricing: true
+partner: { field: vendor_id }
+operations: [search, get, create, update, delete, submit, unsubmit, approve, unapprove]
+header:
+  vendor_id: { type: ref, ref: vendor, label: { zh: 往来单位, en: Vendor }, required: true }
+  pay_mode:
+    type: enum
+    label: { zh: 结算方式, en: Payment mode }
+    required: true
+    default: transfer
+    values:
+      cash:     { zh: 现金, en: Cash }
+      transfer: { zh: 转账, en: Transfer }
+lines:
+  item_text: { type: string, label: { zh: 费用项目, en: Item }, required: true }
+search:
+  keyword_fields: [number]
+  filters: [status, vendor_id, biz_date]
+  default_sort: [biz_date desc, number desc]

@@ -1,0 +1,13 @@
+# 仓库：库存按（存货，仓库）结存，仓库字段由各库存联动声明（需求 9 第 1、11 条）。
+entity: depot
+label: { zh: 仓库, en: Depot }
+id_prefix: dep
+code: { prefix: D, digits: 3 }
+shared: true
+operations: [search, get]
+search:
+  keyword_fields: [code, name]
+  default_sort: [code]
+fields:
+  name:      { type: string, label: { zh: 名称, en: Name }, required: true }
+  branch_id: { type: ref, ref: branch, label: { zh: 所属组织, en: Branch }, required: true }

@@ -1,0 +1,10 @@
+# 部门：编码由引擎按创建顺序生成，依次为 D001、D002、D003，内部 ID 依次为
+# dept_000001 到 dept_000003。
+#
+# org 是去掉 _id 后缀书写的引用，值为组织的编码（需求 20 第 16 条）；本文件排在
+# 01-org.yaml 之后，所以被引用的组织已经创建。
+# kind 是名为 kind 的 enum 字段，按 `<kind 值>_kind` 书写，即 department_kind。
+records:
+  - { kind: department, name: 示例采购中心, org: ORG01, department_kind: management }
+  - { kind: department, name: 示例仓储中心, org: ORG01, department_kind: management }
+  - { kind: department, name: 示例装配车间, org: ORG01, department_kind: production }

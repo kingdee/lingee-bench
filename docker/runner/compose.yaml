@@ -1,0 +1,24 @@
+# 部署方式 1：单机 docker compose 运行 Harbor（Docker-outside-of-Docker）。
+#
+# 关键约束：
+# - 挂载宿主机 /var/run/docker.sock：等同于授予宿主机 root 权限，只在专用评测机上使用。
+# - 仓库必须挂载到与宿主机**相同的绝对路径**（LG_BENCH_HOST_DIR）。Harbor 写给 daemon 的
+#   bind mount（trial 日志、模型代理日志）用的是这个路径，由宿主机解析。
+# - 凭据只经 env_file 进入本容器，再经 compose 插值进入每个 trial 的模型代理 sidecar；
+#   agent 容器只拿到代理地址和占位密钥。
+#
+# 用法（仓库根目录）：
+#   docker build -f docker/model-proxy/Dockerfile -t lg-bench/model-proxy:0.1.0 .
+#   docker build -f docker/runner/Dockerfile -t lg-bench/runner:0.1.0 .
+#   LG_BENCH_HOST_DIR=$PWD docker compose -f docker/runner/compose.yaml run --rm runner \
+#     run --config configs/jobs/pi-glm-5.2-smoke.yaml --job-name <name>
+services:
+  runner:
+    image: lg-bench/runner:0.1.0
+    working_dir: ${LG_BENCH_HOST_DIR:?set LG_BENCH_HOST_DIR to the repo absolute path}
+    env_file:
+      - path: ${LG_BENCH_ENV_FILE:-../../.env.glm}
+        required: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${LG_BENCH_HOST_DIR}:${LG_BENCH_HOST_DIR}

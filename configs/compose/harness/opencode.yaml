@@ -1,0 +1,9 @@
+# 由 `lg-bench harness compose opencode` 生成，勿手改；随 docker/harness/harness-lock.json 更新。
+# 把预构建的 opencode 只读镜像挂到 /opt/lg-harness/opencode（镜像内文件位于根目录）。
+services:
+  main:
+    volumes:
+      - type: image
+        source: lg-bench/harness-opencode:1.19.0-f9024a5584c2
+        target: /opt/lg-harness/opencode
+        read_only: true

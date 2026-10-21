@@ -1,0 +1,14 @@
+# 按数量下推：额度为源行 qty_base 减占用数量（需求 8 第 5 条）。
+conversion:
+  id: supply_order_to_entry
+  source: supply_order
+  target: goods_entry
+  require_source_status: approved
+  limit_by: qty
+  line_selection: by_source_line_id
+  header_mapping:
+    vendor_id: source.vendor_id
+  line_mapping:
+    article_id: source_line.article_id
+    measure_id: source_line.measure_id
+  required_line_inputs: [source_line_id, entry_qty, depot_id]

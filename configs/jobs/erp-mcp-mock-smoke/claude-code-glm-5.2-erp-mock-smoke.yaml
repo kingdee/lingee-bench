@@ -1,0 +1,31 @@
+# claude-code + GLM-5.2 经 MCP 代理连接【离线 mock】ERP MCP 的连通性冒烟（docs/mcp-integration.md）。
+# mock 模式不需要 .env.mcp：代理默认 LG_MCP_TARGET=mock，上游与令牌由 erp-mock-mcp.yaml 注入。
+# 先构建两个镜像：
+#   docker build -f docker/mcp-proxy/Dockerfile -t lg-bench/mcp-proxy:0.1.0 .
+#   docker build -f docker/erp-mock-mcp/Dockerfile -t lg-bench/erp-mock-mcp:0.1.0 .
+# 运行：harbor run --config configs/jobs/erp-mcp-mock-smoke/claude-code-glm-5.2-erp-mock-smoke.yaml --env-file .env.glm
+jobs_dir: jobs
+n_attempts: 1
+n_concurrent_trials: 1
+retry:
+  max_retries: 0
+environment:
+  type: docker
+  extra_docker_compose:
+    - configs/compose/model-proxy.yaml
+    # MCP 代理 sidecar 必须在 erp-mock-mcp.yaml 之前：后者覆盖代理的 mock 上游地址与令牌头。
+    - configs/compose/mcp-proxy.yaml
+    - configs/compose/erp-mock-mcp.yaml
+    - configs/compose/harness/claude-code.yaml
+agents:
+  - import_path: lg_bench.agents.claude_code:LgClaudeCode
+    model_name: glm-5.2
+    override_timeout_sec: 600
+    override_setup_timeout_sec: 1800
+    kwargs:
+      install_mode: image
+      version: "2.1.187"
+      max_turns: 30
+      max_budget_usd: "2.00"
+tasks:
+  - path: examples/tasks/erp-mock-budget-scheme-smoke

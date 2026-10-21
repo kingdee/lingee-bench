@@ -1,0 +1,22 @@
+# 用例 SCCT-01 的工具白名单与初始数据集（随题集版本维护，请勿手工编辑）。
+#
+# 挂载顺序：configs/compose/mcp-proxy.yaml → erp-mock-mcp.yaml → erp-mock-benchmark.yaml → 本文件。
+# 本文件只覆盖 lg-mcp-proxy 的两个环境变量，不定义服务。
+# 为什么 mock 模式也必须挂白名单、全量 tools/list 有多大，见 erp-mock-mcp.yaml 的注释
+# 与 docs/mcp-integration.md 第 7.5 节（实例级数字只在那两处维护，不在本文件重复）。
+#
+# LG_MCP_ALLOWED_TOOLS：代理按它过滤 tools/list 的响应，并拒绝名单外的 tools/call。
+#   这里是本用例所需的 2 个工具（业务包 orgbase、scrisk）加引擎内置的
+#   business_context_get。oracle 与 verifier 也经同一个代理取数，它们用到的工具必须在名单里，
+#   否则被代理以 -32601 拒掉。
+#
+# LG_MCP_MOCK_URL：把代理的 mock 上游指到本用例自己的初始数据集 scct-01。
+#   不挂本文件时走实例的 default_dataset，本用例的工具就查不到任何行。
+services:
+  lg-mcp-proxy:
+    environment:
+      LG_MCP_ALLOWED_TOOLS: >-
+        business_context_get,
+        orgbase_org_fuzzy_row_query,
+        scrisk_kpi_card_query
+      LG_MCP_MOCK_URL: http://erp-mock:8000/d/scct-01/mcp

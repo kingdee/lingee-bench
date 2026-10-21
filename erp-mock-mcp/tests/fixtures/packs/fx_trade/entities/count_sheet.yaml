@@ -1,0 +1,26 @@
+# 审核时按 adjust 方向增减库存的单据：count_kind 为表头必填 enum 字段，
+# 其取值与增减方向的对应关系由联动声明（需求 9 第 2、3 条）。
+bill: count_sheet
+label: { zh: 盘点单, en: Count sheet }
+id_prefix: cs
+number: { prefix: CNT }
+state_machine: standard
+operations: [search, get, create, update, delete, submit, unsubmit, approve, unapprove]
+header:
+  depot_id: { type: ref, ref: depot, label: { zh: 盘点仓库, en: Depot }, required: true }
+  count_kind:
+    type: enum
+    label: { zh: 盘点结果, en: Count result }
+    required: true
+    values:
+      gain: { zh: 盘盈, en: Gain }
+      loss: { zh: 盘亏, en: Loss }
+lines:
+  article_id: { type: ref, ref: article, label: { zh: 存货, en: Article }, required: true }
+  measure_id: { type: ref, ref: measure, label: { zh: 计量单位, en: Measure }, default_from: article.base_measure_id }
+  diff_qty:   { type: qty, label: { zh: 差异数量, en: Difference quantity }, required: true }
+line_quantity: { material_field: article_id, unit_field: measure_id, qty_field: diff_qty }
+search:
+  keyword_fields: [number]
+  filters: [status, biz_date]
+  default_sort: [biz_date desc, number desc]

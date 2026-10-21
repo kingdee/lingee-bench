@@ -1,0 +1,16 @@
+# 组织：组织上下文实体（需求 1 第 8 条）。is_default 为 true 的那一条是缺省组织，
+# 单据表头的 org_id 缺省取它，business_context_get 也返回它；整个 Snapshot 中这样的记录
+# 必须恰好一条，否则加载第 8 步报错（需求 2 第 10 条）。
+#
+# 共享基础数据（shared: true），记录写在 seed/shared/01-org.yaml 里，内部 ID 为 org_000001。
+# 不声明 operations，所以不生成工具：模型通过 business_context_get 看到缺省组织。
+# 编码由共享数据写定，所以不声明 code 生成规则，code 是一个普通的 string 字段。
+entity: org
+label: { zh: 组织, en: Organization }
+id_prefix: org
+shared: true
+context: { role: org, default_flag: is_default }
+fields:
+  code:       { type: string, label: { zh: 编码, en: Code }, required: true, unique: true }
+  name:       { type: string, label: { zh: 名称, en: Name }, required: true }
+  is_default: { type: bool, label: { zh: 缺省组织, en: Default organization }, default: false }

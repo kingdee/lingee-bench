@@ -1,0 +1,44 @@
+# zh-detailed 描述（tool-design.md 第 3 节）：tools/list 中的工具描述与参数描述逐字取自这里
+# （需求 3 第 7 条）。每个工具按功能、适用范围、前置条件、副作用、返回五项书写，工具描述不超过
+# 400 个码位；每个顶层参数、lines 本身以及 lines 元素中的每个参数都要有描述，缺一个加载第 7 步
+# 就报错（需求 3 第 2、3 条）。
+#
+# 这里的工具名是应用 tools/exposure.yaml 之后的名字：stock_adjustment_submit 与
+# stock_adjustment_approve 被 exclude 去掉，所以本文件没有它们的条目（需求 11 第 1 条）。
+#
+# R-INV-002 是 described 规则，它的 description.zh 原样出现在 stock_adjustment_create 描述的
+# 第二行（需求 3 第 6 条）；改动那句话时要同时改 rules/stock_adjustment_scope.yaml。
+#
+# 两条禁令（需求 3 第 4、5 条）：不出现引导性用语；不出现初始数据集中实体记录的名称、编码和单据
+# 编号——交叉检查覆盖实例内全部业务包的描述，而 core 共享数据的编码（计量单位、仓库、组织、部门、
+# 员工的编码）都很短，按子串比对容易误报，所以描述里一律不写具体取值，只写字段与取值的含义。
+variant: zh-detailed
+tools:
+  stock_adjustment_create:
+    description: |-
+      新建库存调整单草稿，登记一个仓库盘点后的盘盈或盘亏差异数量。
+      库存调整单只用于盘点差异，采购到货必须通过采购入库单入库。
+      前置条件：物料与仓库为启用状态，全部分录都在表头的仓库中调整。
+      副作用：只生成 draft 草稿，不改变即时库存；提交并审核后才按表头的调整原因增减库存，本业务包不提供提交与审核工具。
+      返回：新建后的库存调整单，含 id、number、status、表头全部字段和全部分录，每行附基本单位数量 qty_base。
+    params:
+      warehouse_id: 仓库的内部 ID，由 warehouse_search 返回；一张单据只调整一个仓库
+      reason: 调整原因，gain 为盘盈（审核后增加库存），loss 为盘亏（审核后减少库存）；一张单据只能是其中一种
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      remark: 备注；不填时为空
+      lines: 调整分录数组，1 到 200 个元素
+      lines[].material_id: 物料的内部 ID，由 material_search 返回
+      lines[].unit_id: 计量单位的内部 ID；不填时取该物料的基本单位，库存按基本单位记账
+      lines[].qty: 调整数量，大于 0，最多 4 位小数；单位见 unit_id，按物料的换算关系折成基本单位后增减库存，盘盈还是盘亏由表头的 reason 决定
+  inventory_balance_query:
+    description: |-
+      分页查询（物料，仓库）的即时库存，数量以基本单位计。
+      如需查看物料的基本单位与单位换算关系，请使用 material_get；如需按名称或编码查找仓库，请使用 warehouse_search。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含物料引用、仓库引用、物料的基本单位引用和即时库存数量 qty_base）、total、page、page_size、has_more；按物料 ID、再按仓库 ID 升序排列。只返回有库存流水的（物料，仓库），数量为 0 的记录同样返回。
+    params:
+      material_id: 物料的内部 ID，由 material_search 返回；不填时返回全部物料
+      warehouse_id: 仓库的内部 ID，由 warehouse_search 返回；不填时返回全部仓库
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20

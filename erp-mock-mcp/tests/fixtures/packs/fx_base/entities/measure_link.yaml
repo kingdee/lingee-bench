@@ -1,0 +1,9 @@
+# 换算关系：每条记录为一个存货以 alt_measure_id 为换算单位时折合的基本单位数量
+# （1 个换算单位折合 ratio 个基本单位，需求 6 第 6 条）。随存货由初始数据集提供。
+entity: measure_link
+label: { zh: 单位换算, en: Measure conversion }
+id_prefix: mlk
+fields:
+  article_id:     { type: ref, ref: article, label: { zh: 存货, en: Article }, required: true }
+  alt_measure_id: { type: ref, ref: measure, label: { zh: 换算单位, en: Alternative measure }, required: true }
+  ratio:          { type: qty, label: { zh: 换算系数, en: Factor }, required: true }

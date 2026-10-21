@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "conversion.schema.json",
+  "$defs": {
+    "ConversionDef": {
+      "additionalProperties": false,
+      "description": "A push from a source bill to a target bill draft (meta-model.md section 7).\n\n``header_mapping`` maps a field of the target header to ``source.<field>`` and\n``line_mapping`` a field of a target line to ``source_line.<field>``;\n``required_line_inputs`` are the fields the caller gives per line, and they are the only\nparameters of the push tool's lines (requirement 11.12). ``limit_by`` selects the\nquota R-GEN-005 enforces: by the base unit quantity of the source line, or by the\namount of the source bill (requirement 8.5 and 8.6).",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "source": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Target",
+          "type": "string"
+        },
+        "require_source_status": {
+          "enum": [
+            "draft",
+            "submitted",
+            "approved",
+            "closed"
+          ],
+          "title": "Require Source Status",
+          "type": "string"
+        },
+        "limit_by": {
+          "enum": [
+            "qty",
+            "amount"
+          ],
+          "title": "Limit By",
+          "type": "string"
+        },
+        "line_selection": {
+          "const": "by_source_line_id",
+          "default": "by_source_line_id",
+          "title": "Line Selection",
+          "type": "string"
+        },
+        "header_mapping": {
+          "additionalProperties": false,
+          "default": {},
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "pattern": "^source\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            }
+          },
+          "title": "Header Mapping",
+          "type": "object"
+        },
+        "line_mapping": {
+          "additionalProperties": false,
+          "default": {},
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "pattern": "^source_line\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            }
+          },
+          "title": "Line Mapping",
+          "type": "object"
+        },
+        "required_line_inputs": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Required Line Inputs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "target",
+        "require_source_status",
+        "limit_by",
+        "required_line_inputs"
+      ],
+      "title": "ConversionDef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``conversions/<id>.yaml``: one conversion under the key ``conversion``.",
+  "properties": {
+    "conversion": {
+      "$ref": "#/$defs/ConversionDef"
+    }
+  },
+  "required": [
+    "conversion"
+  ],
+  "title": "ConversionFile",
+  "type": "object"
+}

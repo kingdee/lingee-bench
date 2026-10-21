@@ -1,0 +1,8 @@
+# 员工：编码依次为 E001 到 E003，内部 ID 依次为 emp_000001 到 emp_000003。
+# 第一条是实例配置与初始数据集的 current_user（emp_000001）。
+#
+# department 按部门编码引用，部门在 02-department.yaml 中已经创建。
+records:
+  - { kind: employee, name: 示例采购员, department: D001, role: buyer }
+  - { kind: employee, name: 示例采购主管, department: D001, role: manager }
+  - { kind: employee, name: 示例仓管员, department: D002, role: keeper }

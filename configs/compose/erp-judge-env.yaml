@@ -1,0 +1,15 @@
+# ERP评测任务（judge+numeric 评分）的 judge 环境注入。
+# 挂载顺序：model-proxy.yaml → …（各题白名单片段）→ 本文件 → harness/<harness>.yaml。
+# judge 走模型代理 sidecar：真实密钥只存在于 lg-model-proxy 容器（Bearer 由代理注入），
+# main（agent 与 shared verifier 同容器）只持有占位 key 与代理地址。
+# LG_EVAL_JUDGE_MODEL 经 compose 插值取进程环境（--env-file 提供），缺省 glm-5.3；
+# 所用模型必须在 .env.glm 的 LG_PROXY_ALLOWED_MODELS 里，否则代理 400。
+# 超时 420s（2026-10-16 从 240 上调：报表类题的 evidence 变大后 glm-5.3 曾 240s 超时；
+# 需低于各题 verifier timeout——本批多数 600s，若有 360s 的题其实际上限仍由 verifier 决定）。
+services:
+  main:
+    environment:
+      LG_EVAL_JUDGE_URL: http://lg-model-proxy:18080/openai/chat/completions
+      LG_EVAL_JUDGE_MODEL: ${LG_EVAL_JUDGE_MODEL:-glm-5.3}
+      LG_EVAL_JUDGE_API_KEY: lg-bench-judge-placeholder
+      DS_EVAL_JUDGE_TIMEOUT_SEC: "420"

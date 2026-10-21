@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dataset.schema.json",
+  "$defs": {
+    "BulkDef": {
+      "additionalProperties": false,
+      "description": "One item of ``bulk``: ``count`` background records of the entity ``kind``.\n\nThe Seed_Builder creates them after the records of ``entities``, in the order of the\nlist and without aliases; a field with a generator gets a generated value and every\nother field its default (requirement 20.4). ``kind`` must be an entity whose ``shared``\nis false, which the Seed_Builder checks (requirement 20.6).",
+      "properties": {
+        "kind": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Kind",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "count"
+      ],
+      "title": "BulkDef",
+      "type": "object"
+    },
+    "ChoiceGenerator": {
+      "additionalProperties": false,
+      "description": "One of ``values``, drawn from the dataset's random sequence.",
+      "properties": {
+        "gen": {
+          "const": "choice",
+          "title": "Gen",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "gen",
+        "values"
+      ],
+      "title": "ChoiceGenerator",
+      "type": "object"
+    },
+    "CodeWordsGenerator": {
+      "additionalProperties": false,
+      "description": "A text built from ``words``, for names and specifications.",
+      "properties": {
+        "gen": {
+          "const": "code_words",
+          "title": "Gen",
+          "type": "string"
+        },
+        "words": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Words",
+          "type": "array"
+        }
+      },
+      "required": [
+        "gen",
+        "words"
+      ],
+      "title": "CodeWordsGenerator",
+      "type": "object"
+    },
+    "CompanyNameGenerator": {
+      "additionalProperties": false,
+      "description": "A company name; ``industry`` narrows the words it is built from (seed-data.md 1).",
+      "properties": {
+        "gen": {
+          "const": "company_name",
+          "title": "Gen",
+          "type": "string"
+        },
+        "industry": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Industry"
+        }
+      },
+      "required": [
+        "gen"
+      ],
+      "title": "CompanyNameGenerator",
+      "type": "object"
+    },
+    "DecimalRangeGenerator": {
+      "additionalProperties": false,
+      "description": "A decimal between ``min`` and ``max``, both included and written as text.",
+      "properties": {
+        "gen": {
+          "const": "decimal_range",
+          "title": "Gen",
+          "type": "string"
+        },
+        "min": {
+          "minLength": 1,
+          "title": "Min",
+          "type": "string"
+        },
+        "max": {
+          "minLength": 1,
+          "title": "Max",
+          "type": "string"
+        }
+      },
+      "required": [
+        "gen",
+        "min",
+        "max"
+      ],
+      "title": "DecimalRangeGenerator",
+      "type": "object"
+    },
+    "IntRangeGenerator": {
+      "additionalProperties": false,
+      "description": "An integer between ``min`` and ``max``, both included.",
+      "properties": {
+        "gen": {
+          "const": "int_range",
+          "title": "Gen",
+          "type": "string"
+        },
+        "min": {
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "gen",
+        "min",
+        "max"
+      ],
+      "title": "IntRangeGenerator",
+      "type": "object"
+    },
+    "PeriodsDef": {
+      "additionalProperties": false,
+      "description": "``periods``: which accounting periods are closed (requirement 20.1).\n\nPeriods are calendar months and the month of the anchor date is the current period;\nperiods before ``closed_before`` are closed, so the default ``month(0)`` closes every\nperiod before the anchor month and ``month(-1)`` leaves the previous month open\n(seed-data.md section 4). ``closed_before`` is the only key of ``periods``.",
+      "properties": {
+        "closed_before": {
+          "default": "month(0)",
+          "pattern": "^month\\((?:0|-?[1-9][0-9]*)\\)$",
+          "title": "Closed Before",
+          "type": "string"
+        }
+      },
+      "title": "PeriodsDef",
+      "type": "object"
+    },
+    "PersonNameGenerator": {
+      "additionalProperties": false,
+      "description": "A person's name.",
+      "properties": {
+        "gen": {
+          "const": "person_name",
+          "title": "Gen",
+          "type": "string"
+        }
+      },
+      "required": [
+        "gen"
+      ],
+      "title": "PersonNameGenerator",
+      "type": "object"
+    },
+    "ShortNameGenerator": {
+      "additionalProperties": false,
+      "description": "A short name derived from the record's name.",
+      "properties": {
+        "gen": {
+          "const": "short_name",
+          "title": "Gen",
+          "type": "string"
+        }
+      },
+      "required": [
+        "gen"
+      ],
+      "title": "ShortNameGenerator",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``datasets/<name>.yaml``: an initial dataset (requirement 20.1, seed-data.md 2).\n\n``random_seed`` seeds the single pseudo random sequence of a build, so it is a\nnon-negative integer (requirement 20.3). The Seed_Builder creates, in this order, the\nShared_Data of the packs of ``include_shared``, the records of ``entities`` with their\naliases, and the records of ``bulk``, each group in its written order\n(requirement 20.17); leaving one of the three out means none. ``current_user``\noverrides the current user of the instance configuration.",
+  "properties": {
+    "dataset": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Dataset",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    },
+    "random_seed": {
+      "minimum": 0,
+      "title": "Random Seed",
+      "type": "integer"
+    },
+    "include_shared": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "title": "Include Shared",
+      "type": "array"
+    },
+    "current_user": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z][a-z0-9_]*_[0-9]{6,}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Current User"
+    },
+    "periods": {
+      "$ref": "#/$defs/PeriodsDef",
+      "default": {
+        "closed_before": "month(0)"
+      }
+    },
+    "entities": {
+      "additionalProperties": false,
+      "default": {},
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$": {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/$defs/CompanyNameGenerator"
+                },
+                {
+                  "$ref": "#/$defs/ShortNameGenerator"
+                },
+                {
+                  "$ref": "#/$defs/PersonNameGenerator"
+                },
+                {
+                  "$ref": "#/$defs/ChoiceGenerator"
+                },
+                {
+                  "$ref": "#/$defs/IntRangeGenerator"
+                },
+                {
+                  "$ref": "#/$defs/DecimalRangeGenerator"
+                },
+                {
+                  "$ref": "#/$defs/CodeWordsGenerator"
+                },
+                {
+                  "items": {
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^[a-z][a-z0-9_]*$": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "$ref": "#/$defs/CompanyNameGenerator"
+                          },
+                          {
+                            "$ref": "#/$defs/ShortNameGenerator"
+                          },
+                          {
+                            "$ref": "#/$defs/PersonNameGenerator"
+                          },
+                          {
+                            "$ref": "#/$defs/ChoiceGenerator"
+                          },
+                          {
+                            "$ref": "#/$defs/IntRangeGenerator"
+                          },
+                          {
+                            "$ref": "#/$defs/DecimalRangeGenerator"
+                          },
+                          {
+                            "$ref": "#/$defs/CodeWordsGenerator"
+                          }
+                        ]
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "title": "Entities",
+      "type": "object"
+    },
+    "bulk": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/BulkDef"
+      },
+      "title": "Bulk",
+      "type": "array"
+    }
+  },
+  "required": [
+    "dataset",
+    "version",
+    "random_seed"
+  ],
+  "title": "DatasetDef",
+  "type": "object"
+}

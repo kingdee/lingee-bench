@@ -1,0 +1,23 @@
+# 每个 trial 追加的模型代理 sidecar（job YAML 的 environment.extra_docker_compose 引用）。
+# - 真实端点与密钥从运行 Harbor 的进程环境（--env-file）插值，只进入本容器；
+#   main（agent）容器只拿到占位密钥，通过 http://lg-model-proxy:18080 访问模型。
+# - 请求日志写到 trial 的 agent/model-proxy/requests.jsonl。
+# - 镜像需预先构建：docker build -f docker/model-proxy/Dockerfile -t lg-bench/model-proxy:0.1.0 .
+services:
+  lg-model-proxy:
+    image: ${LG_MODEL_PROXY_IMAGE:-lg-bench/model-proxy:0.1.0}
+    pull_policy: never
+    user: "0:0"  # 需要写入宿主机上的 trial 日志目录
+    environment:
+      LG_OPENAI_BASE_URL: ${LG_OPENAI_BASE_URL:-}
+      LG_OPENAI_API_KEY: ${LG_OPENAI_API_KEY:-}
+      LG_ANTHROPIC_BASE_URL: ${LG_ANTHROPIC_BASE_URL:-}
+      LG_ANTHROPIC_API_KEY: ${LG_ANTHROPIC_API_KEY:-}
+      LG_PROXY_ALLOWED_MODELS: ${LG_PROXY_ALLOWED_MODELS:-glm-5.2}
+      LG_PROXY_LOG_DIR: /proxy-logs
+    volumes:
+      - ${HOST_AGENT_LOGS_PATH:?HOST_AGENT_LOGS_PATH not provided by Harbor}/model-proxy:/proxy-logs
+  main:
+    depends_on:
+      lg-model-proxy:
+        condition: service_healthy

@@ -1,0 +1,14 @@
+# General-task runtime: only the model proxy joins an external network.
+# The task container uses Docker's internal network on both Mac and Linux.
+services:
+  main:
+    networks:
+      - general-internal
+  lg-model-proxy:
+    networks:
+      - general-internal
+      - default
+networks:
+  general-internal:
+    internal: true
+  default: {}

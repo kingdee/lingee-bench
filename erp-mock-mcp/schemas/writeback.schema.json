@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "writeback.schema.json",
+  "$defs": {
+    "WritebackDef": {
+      "additionalProperties": false,
+      "description": "The update of a source bill when a pushed bill is approved (meta-model.md section 7).\n\n``value`` is a rule expression evaluated per target line for a ``source_line.<field>``\ntarget and once for a ``source.<field>`` target (requirement 8.8); step 5 checks it.\n``auto_close_source_when`` closes the source when every line is linked, and leaving it\nout means the source is never closed automatically (requirement 8.13).",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "conversion": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Conversion",
+          "type": "string"
+        },
+        "on": {
+          "const": "approve",
+          "title": "On",
+          "type": "string"
+        },
+        "target": {
+          "pattern": "^source(?:_line)?\\.[a-z][a-z0-9_]*$",
+          "title": "Target",
+          "type": "string"
+        },
+        "op": {
+          "const": "add",
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "reverse_on": {
+          "const": "unapprove",
+          "default": "unapprove",
+          "title": "Reverse On",
+          "type": "string"
+        },
+        "auto_close_source_when": {
+          "anyOf": [
+            {
+              "const": "all_lines_linked",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auto Close Source When"
+        }
+      },
+      "required": [
+        "id",
+        "conversion",
+        "on",
+        "target",
+        "op",
+        "value"
+      ],
+      "title": "WritebackDef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``writebacks/<id>.yaml``: one writeback under the key ``writeback``.",
+  "properties": {
+    "writeback": {
+      "$ref": "#/$defs/WritebackDef"
+    }
+  },
+  "required": [
+    "writeback"
+  ],
+  "title": "WritebackFile",
+  "type": "object"
+}

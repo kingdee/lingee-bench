@@ -1,0 +1,72 @@
+# zh-detailed 描述（tool-design.md 第 3 节）：tools/list 中的工具描述与参数描述逐字取自这里
+# （需求 3 第 7 条）。每个工具按功能、适用范围、前置条件、副作用、返回五项书写，工具描述不超过
+# 400 个码位；每个顶层参数都要有描述（需求 3 第 2、3 条）。
+# 这里的工具名已应用 tools/exposure.yaml：depot_get 被 exclude 去掉，vendor_get 改名为
+# vendor_detail_get，所以本文件不为它们之外的名称写条目（需求 11 第 1 条）。
+# 描述中不出现初始数据集里的名称、编码与单据编号，也不出现引导性用语（需求 3 第 4、5 条）。
+variant: zh-detailed
+tools:
+  article_search:
+    description: |-
+      按关键字和存货类别分页检索存货，返回存货摘要。
+      如需查看基本单位、采购单位、税率和单位换算关系，请使用 article_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、code、name、spec、grade）、total、page、page_size、has_more；按 code 升序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配 code、name 或 spec，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      grade: 存货类别，plain 为普通件，fine 为精密件；不填时返回全部类别
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  article_get:
+    description: |-
+      按内部 ID 获取单个存货的全部字段，以及它的全部单位换算关系。
+      如需按名称、编码或规格查找存货，请使用 article_search。
+      前置条件：id 由 article_search 返回。
+      副作用：无，只读。
+      返回：存货的 id、code、name、spec、grade、base_measure（基本单位，库存按它记账）、buy_measure（采购单位，为空表示与基本单位相同）、tax_rate，以及单位换算关系数组，每项含 alt_measure 和 ratio，表示 1 个换算单位折合 ratio 个基本单位。
+    params:
+      id: 存货的内部 ID，由 article_search 返回
+  depot_search:
+    description: |-
+      按关键字分页检索仓库，返回仓库摘要。
+      如需查看某个仓库里某个存货的即时库存，请使用 stock_level_query。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、code、name）、total、page、page_size、has_more；按 code 升序排列，id 为最后排序键。本业务包不提供按 ID 获取单个仓库的工具，仓库的全部字段就是这些摘要字段。
+    params:
+      keyword: 关键字，按包含匹配 code 或 name，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  measure_search:
+    description: |-
+      按关键字分页检索计量单位，返回计量单位摘要。
+      存货的基本单位与采购单位、单据分录的计量单位都用这里返回的 id 填写；如需查看某个存货有哪些换算单位，请使用 article_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、code、name）、total、page、page_size、has_more；按 code 升序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配 code 或 name，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  vendor_search:
+    description: |-
+      按关键字和状态分页检索往来单位，返回往来单位摘要。
+      如需查看联系人、账期天数和缺省税率，请使用 vendor_detail_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、code、name、short_name、status）、total、page、page_size、has_more；按 code 升序排列，id 为最后排序键。status 为 disabled 的往来单位不能写入新单据。
+    params:
+      keyword: 关键字，按包含匹配 code、name 或 short_name，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，enabled 为启用，disabled 为停用；不填时返回全部状态
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  vendor_detail_get:
+    description: |-
+      按内部 ID 获取单个往来单位的全部字段。
+      如需按名称、编码或简称查找往来单位，请使用 vendor_search。
+      前置条件：id 由 vendor_search 返回。
+      副作用：无，只读。
+      返回：往来单位的 id、code、name、short_name、contact（联系人）、pay_days（账期天数）、default_tax_rate（缺省税率）和 status。
+    params:
+      id: 往来单位的内部 ID，由 vendor_search 返回

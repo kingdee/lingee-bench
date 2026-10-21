@@ -1,0 +1,7 @@
+# described 规则：引擎不拦截，规则文本必须原样出现在 applies_to_tools 所列工具的
+# zh-detailed 描述中（需求 3 第 6 条）。
+rule:
+  id: R-FXT-002
+  enforcement: described
+  description: { zh: 盘点单只用于登记盘点差异，采购收料必须通过收料单入库 }
+  applies_to_tools: [count_sheet_create]

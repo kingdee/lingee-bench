@@ -1,0 +1,13 @@
+Lingee Bench
+Copyright 2026 Kingdee International Software Group Company Limited
+
+Original project software, adapters, verifiers, configuration and documentation
+are licensed under Apache-2.0; see LICENSE.
+
+Third-party materials retain their original authorship, copyright and license
+notices. The project licenses do not replace those notices or grant additional
+rights in third-party materials.
+
+Harbor and other installed dependencies remain under their own licenses.
+Harness executables are installed separately under their respective terms;
+see the notices in docker/harness/*/files/NOTICE.

@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rule.schema.json",
+  "$defs": {
+    "DescribedRuleDef": {
+      "additionalProperties": false,
+      "description": "A rule the engine does not enforce (meta-model.md section 9).\n\n``description.zh`` must appear verbatim in the zh-detailed description of every tool of\n``applies_to_tools``, which step 7 checks; it also reports an empty ``applies_to_tools``\n(requirement 3.6 and 3.8), so an empty list is accepted here.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "enforcement": {
+          "const": "described",
+          "title": "Enforcement",
+          "type": "string"
+        },
+        "description": {
+          "$ref": "#/$defs/Label"
+        },
+        "applies_to_tools": {
+          "default": [],
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Applies To Tools",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "enforcement",
+        "description"
+      ],
+      "title": "DescribedRuleDef",
+      "type": "object"
+    },
+    "EnforcedRuleDef": {
+      "additionalProperties": false,
+      "description": "A rule the engine checks on the operations of ``on`` (meta-model.md section 9).\n\n``check`` is a rule expression, checked at step 5 and evaluated on the bill after the\noperation (requirement 10.5); when it is false, the call ends with ``error_code``, the\nrule's id and ``message.zh``, and ``field`` gives the field path of the detail item\n(requirement 10.7). The id is text here: step 5 checks it against the pack's\nrule_prefix (requirement 2.8).",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "bill": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Bill",
+          "type": "string"
+        },
+        "enforcement": {
+          "const": "enforced",
+          "title": "Enforcement",
+          "type": "string"
+        },
+        "on": {
+          "items": {
+            "enum": [
+              "create",
+              "update",
+              "delete",
+              "submit",
+              "unsubmit",
+              "approve",
+              "unapprove",
+              "close",
+              "unclose"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "On",
+          "type": "array"
+        },
+        "check": {
+          "minLength": 1,
+          "title": "Check",
+          "type": "string"
+        },
+        "error_code": {
+          "enum": [
+            "VALIDATION_FAILED",
+            "BUSINESS_RULE_VIOLATION",
+            "INVALID_STATE",
+            "CONFLICT"
+          ],
+          "title": "Error Code",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "message": {
+          "$ref": "#/$defs/Label"
+        }
+      },
+      "required": [
+        "id",
+        "bill",
+        "enforcement",
+        "on",
+        "check",
+        "error_code",
+        "message"
+      ],
+      "title": "EnforcedRuleDef",
+      "type": "object"
+    },
+    "Label": {
+      "additionalProperties": false,
+      "description": "Display name of an object or field: ``{ zh: 名称 }`` or ``{ zh: 供应商, en: Supplier }``.",
+      "properties": {
+        "zh": {
+          "minLength": 1,
+          "title": "Zh",
+          "type": "string"
+        },
+        "en": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "En"
+        }
+      },
+      "required": [
+        "zh"
+      ],
+      "title": "Label",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``rules/<id>.yaml``: one rule under the key ``rule``.",
+  "properties": {
+    "rule": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EnforcedRuleDef"
+        },
+        {
+          "$ref": "#/$defs/DescribedRuleDef"
+        }
+      ],
+      "title": "Rule"
+    }
+  },
+  "required": [
+    "rule"
+  ],
+  "title": "RuleFile",
+  "type": "object"
+}

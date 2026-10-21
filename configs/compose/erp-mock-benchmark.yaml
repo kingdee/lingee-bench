@@ -1,0 +1,32 @@
+# 把 erp-mock sidecar 切到离线 ERP 评测实例 erp-benchmark（镜像内 /opt/erp-mock-mcp/instances/erp-benchmark，
+# 来源 datasets/environments/erp-mock-mcp，见 docker/erp-mock-mcp/Dockerfile）。
+# 必须排在 configs/compose/erp-mock-mcp.yaml 之后：后者定义 erp-mock 服务并把代理的 mock
+# 上游指向它，本文件只覆盖它的 command。
+#
+# 为什么保留这一层：镜像的默认 CMD 已经是 --instance .../instances/erp-benchmark
+# （docker/erp-mock-mcp/Dockerfile 末行），所以本文件与默认行为同值，挂不挂结果一样。
+# 保留它是为了让 job 的 extra_docker_compose 自己完整声明用哪个实例，不依赖镜像默认值：
+# 以后镜像默认实例若再变，已挂本文件的 job 不受影响。
+#
+# 为什么不做成 ${LG_ERP_MOCK_INSTANCE} 这种变量：compose 的插值取自运行 Harbor 的进程环境，
+# job YAML 管不到。那样一来 job 文件就不再自己决定用哪个实例——忘记导出变量时会**静默**服务
+# 别的实例，题目拿不到预算工具却看不出原因。用文件选实例，job 的 extra_docker_compose
+# 就是完整声明，不依赖外部环境。
+#
+# demo 数据不进镜像：示例实例 instances/p2p-demo 不被 Dockerfile 拷入（COPY 按实例目录逐个
+# 拷），所以镜像里没有可回落的 demo 实例，写错实例名只会启动失败，不会静默服务 demo 数据。
+#
+# 实例内按用例族分数据集（instance.yaml 的 datasets）。要让某道题只拿自己那族的期初数据，
+# 在 job 对应的片段里把代理的 mock 上游指到该数据集即可，不必另起实例：
+#   LG_MCP_MOCK_URL: http://erp-mock:8000/d/<数据集名>/mcp
+# 不指定时走实例的 default_dataset。
+services:
+  erp-mock:
+    command:
+      [
+        "serve",
+        "--instance", "/opt/erp-mock-mcp/instances/erp-benchmark",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--data-dir", "/var/lib/erp-mock",
+      ]

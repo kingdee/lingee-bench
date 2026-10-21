@@ -1,0 +1,9 @@
+# 由 `lg-bench harness compose claude-code` 生成，勿手改；随 docker/harness/harness-lock.json 更新。
+# 把预构建的 claude-code 只读镜像挂到 /opt/lg-harness/claude-code（镜像内文件位于根目录）。
+services:
+  main:
+    volumes:
+      - type: image
+        source: lg-bench/harness-claude-code:2.1.187-05f1d1b93ed4
+        target: /opt/lg-harness/claude-code
+        read_only: true

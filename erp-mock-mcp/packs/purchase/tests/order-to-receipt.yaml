@@ -1,0 +1,135 @@
+# 包级测试用例：下推 purchase_order_to_receipt、反写 receipt_approve_writeback_order（含
+# auto_close_source_when）与库存联动 purchase_receipt_inventory 的回放用例（需求 21 第 9 条）。
+#
+# setup 用 `status: approved` 的采购订单做起点（需求 20 第 2 条）：订单 20 BOX，1 BOX 折合
+# 12 PCS，所以可入库数量是 240 个基本单位。订单的业务日期在本月 1 日、交货日期在 20 日，
+# 满足 R-PUR-001，否则构建就会在 create 处失败（需求 20 第 15 条）。
+#
+# 回放：下推 5 BOX、提交、审核，再下推剩下的 15 BOX、提交、审核。两次审核各写一批库存流水
+# （direction 为 in，每行 +qty_base），并把每行的 qty_base 反写到订单行的 linked_qty；第二次
+# 反写后订单每行的 linked_qty 都不小于 qty_base，订单自动转为 closed（需求 8 第 13 条）。
+# 中间两步用 purchase_order_get 核对订单的状态与 linked_qty——M0 没有暴露入库单的 get，
+# 订单详情是模型能看到反写结果的唯一渠道。
+#
+# 即时库存的变化没有工具能读到：即时库存查询属于 inventory 业务包，不在本包的工具里。
+# 每一步之后执行器都检查 INV-1（即时库存等于库存流水之和且不小于 0），
+# tests/packs/test_purchase_pack.py 另外直接读了（物料，仓库）的即时库存。
+#
+# 内部 ID：共享数据先建，所以仓库依次为 wh_000001 到 wh_000003（第三个已停用）；
+# 供应商为 sup_000001、物料为 mat_000001、订单为 po_000001，它的第一行是 po_000001-1。
+case: order-to-receipt
+anchor_date: 2026-10-09
+setup:
+  supplier:main:
+    kind: supplier
+    name: 入库用例专用轴承供应商
+    short_name: 入库轴承
+  material:boxed:
+    kind: material
+    name: 入库用例专用滚针轴承
+    spec: 入库用例规格 D20
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: BOX
+    tax_rate: "0.13"
+  unit_conversion:boxed:
+    kind: unit_conversion
+    material: "material:boxed"
+    from_unit: BOX
+    factor: "12"
+  purchase_order:placed:
+    kind: purchase_order
+    supplier: "supplier:main"
+    biz_date: month(0).day(1)
+    delivery_date: month(0).day(20)
+    status: approved
+    lines:
+      - { material: "material:boxed", unit: BOX, qty: "20", price: "10.17" }
+steps:
+  # 下推 5 BOX 入原料仓：表头的供应商与单价口径取 header_mapping，分录的物料、计量单位、
+  # 单价与税率取 line_mapping，数量与入库仓库由调用方输入（需求 8 第 1 条）。
+  # amount_with_tax = round(5 × 10.17, 2) = 50.85，amount = round(50.85 ÷ 1.13, 2) = 45.00
+  - call: purchase_receipt_create_from_order
+    args:
+      order_id: "$purchase_order:placed"
+      lines:
+        - { source_line_id: "$purchase_order:placed-1", qty: "5", warehouse_id: wh_000001 }
+    alias: purchase_receipt:first
+    expect:
+      result:
+        id: prcv_000001
+        status: draft
+        biz_date: "2026-10-09"
+        supplier: { id: sup_000001, code: S0001 }
+        price_includes_tax: true
+        amount: "45.00"
+        tax_amount: "5.85"
+        amount_with_tax: "50.85"
+        source_bill: { id: po_000001 }
+        lines:
+          - line_no: 1
+            material: { id: mat_000001, code: M00001 }
+            unit: { id: unit_000002, code: BOX }
+            warehouse: { id: wh_000001, code: WH01 }
+            qty: "5"
+            qty_base: "60"
+            price: "10.17"
+            tax_rate: "0.13"
+            amount_with_tax: "50.85"
+            source_line_id: po_000001-1
+  - call: purchase_receipt_submit
+    args: { id: "$purchase_receipt:first" }
+    expect: { result: { status: submitted } }
+  # 审核：写入 +60 的库存流水并反写订单行的 linked_qty
+  - call: purchase_receipt_approve
+    args: { id: "$purchase_receipt:first" }
+    expect: { result: { status: approved } }
+  # 订单还没入足（60 < 240），状态保持 approved，已入库数量为 60
+  - call: purchase_order_get
+    args: { id: "$purchase_order:placed" }
+    expect:
+      result:
+        status: approved
+        lines:
+          - { line_no: 1, qty_base: "240", linked_qty: "60" }
+  # 剩下 180 个基本单位，下推 16 BOX（192）超额（需求 8 第 5 条）
+  - call: purchase_receipt_create_from_order
+    args:
+      order_id: "$purchase_order:placed"
+      lines:
+        - { source_line_id: "$purchase_order:placed-1", qty: "16", warehouse_id: wh_000001 }
+    expect: { is_error: true, error_code: BUSINESS_RULE_VIOLATION, rule_id: R-GEN-005 }
+  # 入足剩下的 15 BOX，这次换一个仓库，同一订单行可以分批入不同仓库
+  - call: purchase_receipt_create_from_order
+    args:
+      order_id: "$purchase_order:placed"
+      lines:
+        - { source_line_id: "$purchase_order:placed-1", qty: "15", warehouse_id: wh_000002 }
+    alias: purchase_receipt:second
+    expect:
+      result:
+        id: prcv_000002
+        status: draft
+        lines:
+          - { line_no: 1, qty: "15", qty_base: "180", warehouse: { id: wh_000002, code: WH02 } }
+  - call: purchase_receipt_submit
+    args: { id: "$purchase_receipt:second" }
+    expect: { result: { status: submitted } }
+  - call: purchase_receipt_approve
+    args: { id: "$purchase_receipt:second" }
+    expect: { result: { status: approved } }
+  # 反写后订单各行都入足，订单自动关闭（需求 8 第 13 条）
+  - call: purchase_order_get
+    args: { id: "$purchase_order:placed" }
+    expect:
+      result:
+        status: closed
+        lines:
+          - { line_no: 1, qty_base: "240", linked_qty: "240" }
+  # 自动关闭的订单不再满足 require_source_status，继续下推被 R-GEN-004 拦住（需求 8 第 3 条）
+  - call: purchase_receipt_create_from_order
+    args:
+      order_id: "$purchase_order:placed"
+      lines:
+        - { source_line_id: "$purchase_order:placed-1", qty: "1", warehouse_id: wh_000001 }
+    expect: { is_error: true, error_code: INVALID_STATE, rule_id: R-GEN-004 }

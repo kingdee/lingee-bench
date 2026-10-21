@@ -1,0 +1,16 @@
+# 引擎测试夹具的基础资料包。实体名与示例业务包（docs/packs/example-p2p.md）全部不同，
+# 用来证明引擎只从配置获得实体名与字段名（需求 1 第 10 条、需求 25 第 2 条）。
+pack: fx_base
+version: 1.0.0
+title: { zh: 夹具基础资料, en: Fixture master data }
+requires_meta_model: ">=0.1.0 <1.0.0"
+# 实体与换算关系使用 crud、numbering；存货声明基本单位与换算关系，使用 unit_conversion。
+primitives: [crud, numbering, unit_conversion]
+rule_prefix: FXB
+id_prefixes: [br, opr, msr, art, mlk, ven, dep]
+number_prefixes: []
+# 本包生成的工具都以这些前缀开头：vendor_、article_、depot_、measure_。
+tool_prefixes: [vendor_, article_, depot_, measure_]
+description_variants: [zh-detailed]
+license: Apache-2.0
+maintainers: ["ERP-Mock-MCP 维护者"]

@@ -1,0 +1,42 @@
+# 采购订单：采购主线的核心单据（example-p2p.md 第 4 节与第 10 节的实体关系图）。
+# 既是 purchase_requisition_to_order 的目标，也是 purchase_order_to_receipt 的来源，所以引擎
+# 为它的分录同时添加两个只读字段：qty_base（基本单位数量）和 linked_qty（已入库数量）。
+#
+# pricing 为 true：引擎添加表头 price_includes_tax、amount、tax_amount、amount_with_tax 和
+# 分录 qty、price、tax_rate 与三个金额字段，并按需求 6 第 1、2 条计算（需求 1 第 3 条）。
+# 分录数量语义取标准字段 qty，所以 line_quantity 不声明 qty_field（需求 6 第 12 条）。
+#
+# partner 声明往来单位字段，供 search 摘要返回供应商引用（需求 5 第 10 条）。
+#
+# 分录的 tax_rate 用同名字段声明缺省值 default_from: material.tax_rate（需求 1 第 5 条）：
+# 不填税率时取该物料的税率。同名声明只能写 type、label 和三个缺省属性，不能写 values
+# （需求 1 第 6 条），所以这里不像 core 的 material.tax_rate 那样约束允许值，见 README.md。
+#
+# operations 是 example-p2p.md 第 8 节为采购订单列出的 12 个工具（含下推工具）所对应的操作
+# （需求 21 第 4 条）。M0 工具清单保留 search、get、create、update、submit、approve、close 与
+# 下推工具，delete、unsubmit、unapprove、unclose 由 tools/exposure.yaml 的 exclude 去掉。
+bill: purchase_order
+label: { zh: 采购订单, en: Purchase order }
+id_prefix: po
+number: { prefix: CGDD }
+state_machine: standard
+pricing: true
+partner: { field: supplier_id }
+operations:
+  [search, get, create, update, delete, submit, unsubmit, approve, unapprove, close, unclose]
+header:
+  supplier_id: { type: ref, ref: supplier, label: { zh: 供应商, en: Supplier }, required: true }
+  delivery_date: { type: date, label: { zh: 交货日期, en: Delivery date }, required: true }
+lines:
+  material_id: { type: ref, ref: material, label: { zh: 物料, en: Material }, required: true }
+  unit_id:
+    type: ref
+    ref: unit
+    label: { zh: 计量单位, en: Unit }
+    default_from: material.purchase_unit_id
+  tax_rate: { label: { zh: 税率, en: Tax rate }, default_from: material.tax_rate }
+line_quantity: { material_field: material_id, unit_field: unit_id }
+search:
+  keyword_fields: [number]
+  filters: [status, supplier_id, biz_date]
+  default_sort: [biz_date desc, number desc]

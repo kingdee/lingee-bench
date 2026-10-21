@@ -1,0 +1,948 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "entity.schema.json",
+  "$defs": {
+    "BilingualLabel": {
+      "additionalProperties": false,
+      "description": "Display name with both languages, as every enum value has (requirement 1.13).",
+      "properties": {
+        "zh": {
+          "minLength": 1,
+          "title": "Zh",
+          "type": "string"
+        },
+        "en": {
+          "minLength": 1,
+          "title": "En",
+          "type": "string"
+        }
+      },
+      "required": [
+        "zh",
+        "en"
+      ],
+      "title": "BilingualLabel",
+      "type": "object"
+    },
+    "BoolField": {
+      "additionalProperties": false,
+      "description": "A boolean field.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "const": "bool",
+          "title": "Type",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "BoolField",
+      "type": "object"
+    },
+    "CodeDef": {
+      "additionalProperties": false,
+      "description": "``code: { prefix: S, digits: 4 }``: how the engine generates codes (requirement 4.3).\n\nAn entity without this key gets no generated code; its records carry the code written\nin the shared data or the dataset.",
+      "properties": {
+        "prefix": {
+          "pattern": "^[A-Z][A-Z0-9]*$",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "digits": {
+          "minimum": 1,
+          "title": "Digits",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prefix",
+        "digits"
+      ],
+      "title": "CodeDef",
+      "type": "object"
+    },
+    "ContextDef": {
+      "additionalProperties": false,
+      "description": "``context``: the entity is the org or the user context entity (requirement 1.8).\n\n``default_flag`` names the bool field of the org context entity whose only record with\nthe value true is the default organization. Step 5 checks that the org role declares it\nand that it names a bool field, and that each role is taken by exactly one entity\n(requirement 1.14).",
+      "properties": {
+        "role": {
+          "enum": [
+            "org",
+            "user"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "default_flag": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Flag"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "title": "ContextDef",
+      "type": "object"
+    },
+    "DateField": {
+      "additionalProperties": false,
+      "description": "A date field; ``default_context: today`` defaults it to the anchor date.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "const": "date",
+          "title": "Type",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "format": "date",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "default_context": {
+          "anyOf": [
+            {
+              "const": "today",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Context"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DateField",
+      "type": "object"
+    },
+    "DecimalField": {
+      "additionalProperties": false,
+      "description": "A qty, price, money or rate field, optionally limited to the listed ``values``.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "enum": [
+            "qty",
+            "price",
+            "money",
+            "rate"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Values"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DecimalField",
+      "type": "object"
+    },
+    "EnumField": {
+      "additionalProperties": false,
+      "description": "An enum field: ``values`` maps each code to its zh and en labels, in order.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "const": "enum",
+          "title": "Type",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": false,
+          "minProperties": 1,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "$ref": "#/$defs/BilingualLabel"
+            }
+          },
+          "title": "Values",
+          "type": "object"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        }
+      },
+      "required": [
+        "type",
+        "values"
+      ],
+      "title": "EnumField",
+      "type": "object"
+    },
+    "IntField": {
+      "additionalProperties": false,
+      "description": "An integer field.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "const": "int",
+          "title": "Type",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "IntField",
+      "type": "object"
+    },
+    "Label": {
+      "additionalProperties": false,
+      "description": "Display name of an object or field: ``{ zh: 名称 }`` or ``{ zh: 供应商, en: Supplier }``.",
+      "properties": {
+        "zh": {
+          "minLength": 1,
+          "title": "Zh",
+          "type": "string"
+        },
+        "en": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "En"
+        }
+      },
+      "required": [
+        "zh"
+      ],
+      "title": "Label",
+      "type": "object"
+    },
+    "PeriodField": {
+      "additionalProperties": false,
+      "description": "An accounting period field, YYYY-MM.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "const": "period",
+          "title": "Type",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "PeriodField",
+      "type": "object"
+    },
+    "RefField": {
+      "additionalProperties": false,
+      "description": "A reference to a record of the entity or bill named by ``ref``.\n\nIts name ends with ``_id``; results return it under the name without ``_id``\n(requirement 13.3). ``default_context`` org and user give the default organization\nand the current user.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "const": "ref",
+          "title": "Type",
+          "type": "string"
+        },
+        "ref": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Ref",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "default_context": {
+          "anyOf": [
+            {
+              "enum": [
+                "org",
+                "user"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Context"
+        }
+      },
+      "required": [
+        "type",
+        "ref"
+      ],
+      "title": "RefField",
+      "type": "object"
+    },
+    "SearchDef": {
+      "additionalProperties": false,
+      "description": "``search``: the parameters and the order of a search tool (requirement 5.9 to 5.14).\n\nEvery list may be omitted: without ``keyword_fields`` the tool has no keyword parameter,\nwithout ``filters`` no filters, and without ``default_sort`` the results are ordered by\nid alone.",
+      "properties": {
+        "keyword_fields": {
+          "default": [],
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Keyword Fields",
+          "type": "array"
+        },
+        "filters": {
+          "default": [],
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Filters",
+          "type": "array"
+        },
+        "default_sort": {
+          "default": [],
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*(?: (?:asc|desc))?$",
+            "type": "string"
+          },
+          "title": "Default Sort",
+          "type": "array"
+        }
+      },
+      "title": "SearchDef",
+      "type": "object"
+    },
+    "StringField": {
+      "additionalProperties": false,
+      "description": "A string or text field; ``maxLength`` limits its length in code points.",
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Label"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "readonly": {
+          "default": false,
+          "title": "Readonly",
+          "type": "boolean"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "default_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default From"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "text"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "maxLength": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maxlength"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "StringField",
+      "type": "object"
+    },
+    "UnitConversionDef": {
+      "additionalProperties": false,
+      "description": "``unit_conversion``: the base unit of an entity and its conversion records.\n\nDeclared on the entity a bill's quantity semantics measures (requirement 6.8):\n``base_unit_field`` is its ref field to the unit entity, ``entity`` the entity that\nholds the conversion records, and ``material_field``, ``unit_field`` and\n``factor_field`` are the fields of such a record. Step 5 checks the types of all five\n(requirement 6.12).",
+      "properties": {
+        "base_unit_field": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Base Unit Field",
+          "type": "string"
+        },
+        "entity": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Entity",
+          "type": "string"
+        },
+        "material_field": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Material Field",
+          "type": "string"
+        },
+        "unit_field": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Unit Field",
+          "type": "string"
+        },
+        "factor_field": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Factor Field",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base_unit_field",
+        "entity",
+        "material_field",
+        "unit_field",
+        "factor_field"
+      ],
+      "title": "UnitConversionDef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An entity document: basic data, one record per row (meta-model.md section 3).\n\n``shared`` is true for data the pack provides in ``seed/`` and false for data a dataset\nprovides; ``has_status`` adds the engine's enabled and disabled status, which\nR-GEN-006 checks (requirement 5.7).",
+  "properties": {
+    "entity": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Entity",
+      "type": "string"
+    },
+    "label": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Label"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "id_prefix": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Id Prefix",
+      "type": "string"
+    },
+    "code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CodeDef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "shared": {
+      "default": false,
+      "title": "Shared",
+      "type": "boolean"
+    },
+    "has_status": {
+      "default": false,
+      "title": "Has Status",
+      "type": "boolean"
+    },
+    "context": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ContextDef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "unit_conversion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UnitConversionDef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "operations": {
+      "default": [],
+      "items": {
+        "enum": [
+          "search",
+          "get",
+          "create",
+          "update",
+          "delete"
+        ],
+        "type": "string"
+      },
+      "title": "Operations",
+      "type": "array"
+    },
+    "search": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SearchDef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "fields": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringField"
+            },
+            {
+              "$ref": "#/$defs/IntField"
+            },
+            {
+              "$ref": "#/$defs/BoolField"
+            },
+            {
+              "$ref": "#/$defs/EnumField"
+            },
+            {
+              "$ref": "#/$defs/DateField"
+            },
+            {
+              "$ref": "#/$defs/PeriodField"
+            },
+            {
+              "$ref": "#/$defs/DecimalField"
+            },
+            {
+              "$ref": "#/$defs/RefField"
+            }
+          ]
+        }
+      },
+      "title": "Fields",
+      "type": "object"
+    }
+  },
+  "required": [
+    "entity",
+    "id_prefix",
+    "fields"
+  ],
+  "title": "EntityDef",
+  "type": "object"
+}

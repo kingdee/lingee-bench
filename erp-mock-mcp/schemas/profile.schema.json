@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "profile.schema.json",
+  "additionalProperties": false,
+  "description": "``profiles/<name>.yaml``: which tools a session sees (tool-design.md section 8).\n\n``packs`` selects the packs whose tools the profile exposes, in the order tools/list\nreturns them; an empty ``include_tools`` means every tool of those packs, and\n``exclude_tools`` drops tools from that set (requirement 11.10). M0 serves one profile,\nwhose surface is semantic, description_variant zh-detailed and include_deprecated\nfalse; step 4 checks those three values (requirement 2.13), so the other surface and\nthe other variants of :data:`~erp_mock.config.pack.DESCRIPTION_VARIANTS` are\nstructurally valid here.",
+  "properties": {
+    "profile": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Profile",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    },
+    "surface": {
+      "enum": [
+        "semantic",
+        "generic"
+      ],
+      "title": "Surface",
+      "type": "string"
+    },
+    "description_variant": {
+      "minLength": 1,
+      "title": "Description Variant",
+      "type": "string"
+    },
+    "packs": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "title": "Packs",
+      "type": "array"
+    },
+    "include_tools": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "title": "Include Tools",
+      "type": "array"
+    },
+    "exclude_tools": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "title": "Exclude Tools",
+      "type": "array"
+    },
+    "include_deprecated": {
+      "default": false,
+      "title": "Include Deprecated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "profile",
+    "version",
+    "surface",
+    "description_variant",
+    "packs"
+  ],
+  "title": "ProfileDef",
+  "type": "object"
+}

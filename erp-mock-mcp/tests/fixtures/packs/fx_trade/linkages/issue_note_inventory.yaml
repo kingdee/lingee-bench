@@ -1,0 +1,9 @@
+# out 方向：每行按 -qty_base 减少即时库存，不足时违反 R-GEN-007；仓库字段在表头。
+linkage:
+  id: issue_note_inventory
+  bill: issue_note
+  primitive: inventory
+  on: approve
+  direction: out
+  warehouse_field: header.depot_id
+  qty_field: line.qty_base

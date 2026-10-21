@@ -1,0 +1,24 @@
+# core：示例业务包的基础资料包（docs/packs/example-p2p.md 第 3 节）。
+# 组织、部门、员工、供应商、物料、计量单位、单位换算与仓库，没有单据，所以 number_prefixes 为空。
+#
+# primitives 只列本包配置实际使用的 M0 原语（需求 21 第 1 条，判定方式见需求 2 第 6 条）：
+#   crud、numbering —— 每个 entity 都使用；
+#   unit_conversion —— 物料声明了基本单位与换算关系实体（需求 6 第 8 条）。
+# 本包没有单据、下推、反写、联动与 enforced 规则，所以不使用 state_machine、pricing、
+# conversion、writeback、inventory、rule_expr。
+#
+# description_variants 只含 zh-detailed：M0 的 profile 只能取这一个变体（需求 2 第 13 条）。
+pack: core
+version: 1.0.0
+title: { zh: 基础资料, en: Master data }
+requires_meta_model: ">=0.1.0 <1.0.0"
+primitives: [crud, numbering, unit_conversion]
+rule_prefix: CORE
+id_prefixes: [org, dept, emp, sup, mat, unit, ucv, wh]
+number_prefixes: []
+# 本包生成的工具名都以这些前缀开头。department_search 与 employee_search 由
+# tools/exposure.yaml 的 exclude 去掉，但工具名仍由本包占用，所以前缀一并声明。
+tool_prefixes: [supplier_, material_, warehouse_, department_, employee_]
+description_variants: [zh-detailed]
+license: Apache-2.0
+maintainers: ["ERP-Mock-MCP 维护者"]

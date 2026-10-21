@@ -1,0 +1,205 @@
+# zh-detailed 描述（tool-design.md 第 3 节）：tools/list 中的工具描述与参数描述逐字取自这里
+# （需求 3 第 7 条）。每个工具按功能、适用范围、前置条件、副作用、返回五项书写，工具描述不超过
+# 400 个码位；每个顶层参数、lines 本身以及 lines 元素中的每个参数都要有描述，缺一个加载第 7 步
+# 就报错（需求 3 第 2、3 条）。
+#
+# 这里的工具名是应用 tools/exposure.yaml 之后的名字：被 exclude 去掉的 13 个工具没有条目，
+# 下推工具名中的来源简称取 source_short_names（需求 11 第 1、13 条）。本包只有一条包级规则
+# R-PUR-001，它是 enforced，由引擎拦截，不必原样写进描述（需求 3 第 6 条只约束 described 规则）；
+# 但按 tool-design.md 第 3 节，它拦截的前置条件写进了采购订单三个写工具的"前置条件"一项。
+#
+# 两条禁令（需求 3 第 4、5 条）：不出现引导性用语；不出现初始数据集中实体记录的名称、编码和
+# 单据编号——加载第 8 步之后会把每条描述与数据集里的记录逐一比对，比对按子串、ASCII 字母不区分
+# 大小写进行。core 共享数据的编码（计量单位、仓库、部门、员工的编码）都很短，所以描述里一律
+# 不写具体取值，只写含义、格式、取值来源与缺省行为；需要举例时取 core 的 seed/examples/。
+#
+# M0 工具清单的缺口也写在描述里（引言中的 M0 已知限制）：模型只凭工具定义了解服务
+# （01-solution.md D7），所以"本实例没有……的工具"这类事实必须出现在描述中，否则模型会去调用
+# 不存在的工具。
+variant: zh-detailed
+tools:
+  # ---------- 采购申请单：只暴露检索与新建 ----------
+  purchase_requisition_search:
+    description: |-
+      按关键字、状态、申请部门和业务日期范围分页检索采购申请单，返回单据摘要。
+      如需按已审核的申请单订货，请使用 purchase_order_create_from_requisition。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date、department）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。摘要不含分录，本实例也没有采购申请单的详情工具，所以申请分录的 ID 与数量无法通过工具读到。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；只有 approved 的申请单可以下推采购订单；不填时返回全部状态
+      department_id: 申请部门的内部 ID，形如 dept_000001，可从本工具返回的 department.id 取得；不填时不按申请部门过滤
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  purchase_requisition_create:
+    description: |-
+      新建采购申请单草稿，登记一个部门对物料的采购需求。
+      如需直接向供应商订货，请使用 purchase_order_create。
+      前置条件：物料为启用状态；每行的计量单位是该物料的基本单位，或该物料的某个换算单位。
+      副作用：只生成 draft 草稿，不改变库存，也不产生任何采购订单。本实例没有采购申请单的提交与审核工具，本工具建出的草稿不能继续流转；可以下推订单的已审核申请单由服务预置。
+      返回：新建后的申请单，含 id、number、status、表头字段和全部分录，每行附 qty_base（基本单位数量）与 linked_qty（已订货的基本单位数量）。
+    params:
+      department_id: 申请部门的内部 ID，形如 dept_000001，可从 purchase_requisition_search 返回的 department.id 取得；本实例没有部门检索工具
+      applicant_id: 申请人的内部 ID；不填时取当前用户，当前用户见 business_context_get
+      need_date: 需求日期，YYYY-MM-DD；由本申请单下推采购订单时，它会成为订单的交货日期
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      remark: 备注；不填时为空
+      lines: 申请分录数组，1 到 200 个元素
+      lines[].material_id: 物料的内部 ID，由 material_search 返回
+      lines[].unit_id: 计量单位的内部 ID，取自 material_get 返回的 base_unit、purchase_unit 或 unit_conversions 中的 from_unit；不填时取该物料的采购单位
+      lines[].qty: 申请数量，大于 0，最多 4 位小数；单位见 unit_id，按换算关系折成基本单位后作为可订货数量
+
+  # ---------- 采购订单：主线单据，暴露检索、详情、新建、修改与状态推进 ----------
+  purchase_order_search:
+    description: |-
+      按关键字、状态、供应商和业务日期范围分页检索采购订单，返回单据摘要。
+      如需一张订单的全部字段、分录和各行已入库数量，请使用 purchase_order_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date、supplier、amount_with_tax）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。摘要不含分录。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；只有 approved 的订单可以下推采购入库单；不填时返回全部状态
+      supplier_id: 供应商的内部 ID，由 supplier_search 返回；不填时不按供应商过滤
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  purchase_order_get:
+    description: |-
+      按内部 ID 获取单张采购订单的表头全部字段和全部分录，含每行的已入库数量。
+      如需按编号、供应商或业务日期范围查找订单，请使用 purchase_order_search；如需历史成交单价，请使用 purchase_price_query。
+      前置条件：id 由 purchase_order_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、supplier、delivery_date、price_includes_tax、三个金额字段与 remark，以及按 line_no 升序的分录，每项含 line_no、material、unit、qty、qty_base、price、tax_rate、三个金额字段和 linked_qty。某行可入库数量为 qty_base 减去已被入库单（含草稿）占用的数量。
+    params:
+      id: 采购订单的内部 ID，由 purchase_order_search 返回
+  purchase_order_create:
+    description: |-
+      新建采购订单草稿，向供应商订购物料。
+      如需按已审核的采购申请单订货，请使用 purchase_order_create_from_requisition；如需登记到货入库，请使用 purchase_receipt_create_from_order。
+      前置条件：供应商与物料为启用状态；交货日期不得早于业务日期；每行的计量单位是该物料的基本单位，或该物料的某个换算单位。
+      副作用：只生成 draft 草稿，不改变库存；提交并审核后才能下推采购入库单。
+      返回：新建后的订单，含 id、number、status、各金额字段和全部分录，每行附 qty_base 与 linked_qty。
+    params:
+      supplier_id: 供应商的内部 ID，由 supplier_search 返回
+      delivery_date: 要求交货日期，YYYY-MM-DD；不得早于业务日期
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      price_includes_tax: 单价是否含税，true 时按含税单价反算不含税金额；不填时为 true
+      remark: 备注；不填时为空
+      lines: 订单分录数组，1 到 200 个元素
+      lines[].material_id: 物料的内部 ID，由 material_search 返回
+      lines[].unit_id: 计量单位的内部 ID，取自 material_get 返回的 base_unit、purchase_unit 或 unit_conversions 中的 from_unit；不填时取该物料的采购单位
+      lines[].tax_rate: 税率，不小于 0，最多 4 位小数；不填时取该物料的 tax_rate，物料税率见 material_get
+      lines[].qty: 数量，大于 0，最多 4 位小数；单位见 unit_id，按换算关系折成基本单位后作为可入库数量
+      lines[].price: 单价，不小于 0，最多 6 位小数；是否含税由表头 price_includes_tax 决定
+  purchase_order_update:
+    description: |-
+      修改采购订单草稿的表头字段与分录。
+      如需提交该草稿，请使用 purchase_order_submit。
+      前置条件：单据状态为 draft，id 由 purchase_order_search 返回；修改后交货日期不得早于业务日期。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；未提供的可写表头字段保持原值；只修改 price_includes_tax 时全部金额按新口径重算。由采购申请单下推生成的草稿不接受 lines，只能改表头，缺少的供应商就是这样补上的。
+      返回：修改后的订单，含表头全部字段和全部分录。
+    params:
+      id: 采购订单的内部 ID，由 purchase_order_search 返回
+      supplier_id: 供应商的内部 ID，由 supplier_search 返回；不填时保持原值
+      delivery_date: 要求交货日期，YYYY-MM-DD，不得早于业务日期；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值。单据编号按新建时的业务日期分配，改期不改编号
+      price_includes_tax: 单价是否含税；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 订单分录数组，1 到 200 个元素；不填时原分录保持不变；由采购申请单下推生成的草稿不接受本参数
+      lines[].material_id: 物料的内部 ID，由 material_search 返回
+      lines[].unit_id: 计量单位的内部 ID，取自 material_get 返回的 base_unit、purchase_unit 或 unit_conversions 中的 from_unit；不填时取该物料的采购单位
+      lines[].tax_rate: 税率，不小于 0，最多 4 位小数；不填时取该物料的 tax_rate
+      lines[].qty: 数量，大于 0，最多 4 位小数；单位见 unit_id
+      lines[].price: 单价，不小于 0，最多 6 位小数；是否含税由表头 price_includes_tax 决定
+  purchase_order_submit:
+    description: |-
+      提交采购订单，使状态由 draft 变为 submitted。
+      如需审核该订单，请使用 purchase_order_approve。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含供应商、交货日期和每行的物料、计量单位、数量、单价、税率）都有值；交货日期不得早于业务日期。
+      副作用：只改变单据状态，不改变库存，也不反写采购申请单。本实例没有撤回提交的工具，提交后只能继续审核。
+      返回：提交后的订单，含表头全部字段和全部分录。
+    params:
+      id: 采购订单的内部 ID，由 purchase_order_search 返回
+  purchase_order_approve:
+    description: |-
+      审核采购订单，使状态由 submitted 变为 approved，之后可以按行下推采购入库单。
+      如需关闭不再继续入库的订单，请使用 purchase_order_close。
+      前置条件：单据状态为 submitted。
+      副作用：本单据没有库存联动，审核不改变库存。由采购申请单下推生成时，把每行的 qty_base 累加到来源申请行的 linked_qty。审核后各行可入库数量等于 qty_base 减去已被入库单占用的数量。本实例没有反审核的工具。
+      返回：审核后的订单，含表头全部字段和全部分录。
+    params:
+      id: 采购订单的内部 ID，由 purchase_order_search 返回
+  purchase_order_close:
+    description: |-
+      关闭采购订单，使状态由 approved 变为 closed，表示不再继续入库。
+      如需查看各行已入库数量，请使用 purchase_order_get。
+      前置条件：单据状态为 approved。
+      副作用：只改变单据状态，不改变库存与已入库数量；关闭方式记为手工关闭，关闭后不能再下推采购入库单。各行都入足时订单会自动关闭，不必调用本工具。本实例没有反关闭的工具，关闭不可撤销。
+      返回：关闭后的订单，含表头全部字段和全部分录。
+    params:
+      id: 采购订单的内部 ID，由 purchase_order_search 返回
+
+  # ---------- 采购入库单：只能由采购订单下推，暴露下推、提交与审核 ----------
+  purchase_receipt_submit:
+    description: |-
+      提交采购入库单，使状态由 draft 变为 submitted。
+      如需审核该入库单，请使用 purchase_receipt_approve。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含供应商和每行的物料、计量单位、数量、单价、税率、入库仓库）都有值；下推生成的草稿这些字段都已齐备。
+      副作用：只改变单据状态，不改变库存，也不反写采购订单。本实例没有入库单的检索与详情工具，id 只出现在 purchase_receipt_create_from_order 的返回中。
+      返回：提交后的入库单，含表头全部字段和全部分录。
+    params:
+      id: 采购入库单的内部 ID，由 purchase_receipt_create_from_order 返回
+  purchase_receipt_approve:
+    description: |-
+      审核采购入库单，使状态由 submitted 变为 approved，货物入账。
+      如需查看来源订单各行的已入库数量，请使用 purchase_order_get。
+      前置条件：单据状态为 submitted。
+      副作用：为每行写一条库存流水，按 qty_base 增加（物料，入库仓库）的即时库存；把每行的 qty_base 累加到来源订单行的 linked_qty，订单各行都入足后自动关闭订单。本实例没有反审核的工具，审核不可撤销。
+      返回：审核后的入库单，含表头全部字段和全部分录。
+    params:
+      id: 采购入库单的内部 ID，由 purchase_receipt_create_from_order 返回
+
+  # ---------- 下推工具：来源简称取 source_short_names（需求 11 第 13 条） ----------
+  purchase_order_create_from_requisition:
+    description: |-
+      按已审核的采购申请单生成采购订单草稿，逐行登记本次订货的数量与单价。
+      如需新建与申请单无关的订单，请使用 purchase_order_create。
+      前置条件：申请单状态为 approved，requisition_id 由 purchase_requisition_search 返回；每个申请行本次订货的基本单位数量合计不超过它的可订货数量。本实例没有采购申请单的详情工具，source_line_id 无法通过工具读到，只能按它的形式拼出来。
+      副作用：只生成 draft 草稿，不改变申请单的任何字段。订单的交货日期取申请单的需求日期，供应商为空，要先用 purchase_order_update 补上才能提交；审核后才反写申请行的 linked_qty。
+      返回：新建后的订单，含 id、number、status、各金额字段和全部分录。
+    params:
+      requisition_id: 来源采购申请单的内部 ID，由 purchase_requisition_search 返回
+      lines: 订单分录数组，1 到 200 个元素；每项对应一个申请分录，同一申请分录可以出现多次
+      lines[].source_line_id: 来源申请分录的 ID，形如 `<申请单 ID>-<行号>`，行号按分录顺序从 1 起
+      lines[].qty: 数量，大于 0，最多 4 位小数；单位取自申请行的计量单位，按换算关系折成基本单位后计入可订货数量
+      lines[].price: 单价，不小于 0，最多 6 位小数；下推生成的订单 price_includes_tax 为 true，所以这里填含税单价
+  purchase_receipt_create_from_order:
+    description: |-
+      按已审核的采购订单生成采购入库单草稿，逐行登记本次入库的数量与仓库。
+      如需处理盘点差异，请使用 stock_adjustment_create；如需查看订单各行可入库数量，请使用 purchase_order_get。
+      前置条件：订单状态为 approved，order_id 由 purchase_order_search 返回，source_line_id 属于该订单；每个订单行本次入库的基本单位数量合计不超过它的可入库数量；仓库为启用状态。
+      副作用：只生成 draft 草稿，不改变库存与订单的任何字段；供应商、单价口径、单价与税率都取自订单。本实例没有入库单的删除工具，建错的草稿会一直占用订单行的可入库数量。
+      返回：新建后的入库单，含 id、number、status 和全部分录。
+    params:
+      order_id: 来源采购订单的内部 ID，由 purchase_order_search 返回
+      lines: 入库分录数组，1 到 200 个元素；同一订单行可以分多行入不同仓库
+      lines[].source_line_id: 来源订单分录的 ID，形如 `<订单 ID>-<行号>`，由 purchase_order_get 返回
+      lines[].qty: 入库数量，大于 0，最多 4 位小数；单位取自订单行的计量单位，按换算关系折成基本单位后计入库存
+      lines[].warehouse_id: 入库仓库的内部 ID，由 warehouse_search 返回
+
+  # ---------- 查询工具：声明式查询（tools/exposure.yaml 的 queries） ----------
+  purchase_price_query:
+    description: |-
+      查询某个供应商与某个物料的最近成交单价，以及最近几次的单价记录。
+      如需一张订单的全部字段与分录，请使用 purchase_order_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：latest 为最近一张已审核或已关闭采购订单中该物料的 price、price_includes_tax、biz_date 和 number；history 为最近至多 5 次的 price、biz_date 和 number，按业务日期降序、编号降序排列。草稿与已提交的订单不计入。没有成交记录时 latest 为 null，history 为空数组。
+    params:
+      supplier_id: 供应商的内部 ID，由 supplier_search 返回
+      material_id: 物料的内部 ID，由 material_search 返回

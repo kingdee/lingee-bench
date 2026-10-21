@@ -1,0 +1,19 @@
+# semantic：p2p-demo 唯一的工具面（tool-design.md 第 8 节，需求 21 第 2 条）。
+#
+# M0 只服务 semantic 工具面与 zh-detailed 描述变体，include_deprecated 为 false，这三个值
+# 由加载第 4 步校验（需求 2 第 13 条）。
+#
+# packs 与 instance.yaml 的顺序相同，它就是 tools/list 的输出顺序：business_context_get 在前，
+# 随后依次为 core、purchase、inventory 的工具（需求 11 第 9 条、需求 21 第 3 条）。
+#
+# include_tools 与 exclude_tools 都为空（需求 21 第 2 条）：本 profile 暴露这三个包暴露的全部
+# 工具，不再增减。M0 工具清单以外的工具已经由各包 tools/exposure.yaml 的 exclude 去掉
+# （需求 21 第 4 条），所以这里恰好是 example-p2p.md 第 9 节的 22 个工具。
+profile: semantic
+version: 1.0.0
+surface: semantic
+description_variant: zh-detailed
+packs: [core, purchase, inventory]
+include_tools: []
+exclude_tools: []
+include_deprecated: false

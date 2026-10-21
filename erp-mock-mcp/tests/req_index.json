@@ -1,0 +1,1430 @@
+{
+  "spec": "erp-mock-mcp-m0",
+  "source": "../.kiro/specs/erp-mock-mcp-m0/requirements.md",
+  "source_sha256": "8599e1c2ea8e2b14899c4832b708c3430f95068df2975311505c5c0cbce545da",
+  "generated_by": "uv run --locked python scripts/req_trace.py index",
+  "requirements": [
+    {
+      "requirement": 1,
+      "title": "元模型 v0",
+      "criteria": [
+        {
+          "id": "1.1",
+          "summary": "THE Meta_Model SHALL 为 M0 的每类配置对象提供 JSON Schema：entity、bill、conversion、writeback…"
+        },
+        {
+          "id": "1.2",
+          "summary": "THE Meta_Model SHALL 在字段声明中只接受 meta-model.md 第 3 节的 12 种字段类型和 7 种字段属性，以及 ref 的引用…"
+        },
+        {
+          "id": "1.3",
+          "summary": "THE Loader SHALL 为每个单据添加 meta-model.md 第 4 节的引擎标准字段（qty_base 按第 4 条添加），其中只有表头 bi…"
+        },
+        {
+          "id": "1.4",
+          "summary": "THE Meta_Model SHALL 允许单据分录声明数量语义，即指定物料引用字段和计量单位引用字段，未启用 pricing 时另指定一个 qty 类型的数…"
+        },
+        {
+          "id": "1.5",
+          "summary": "THE Meta_Model SHALL 允许业务包在 header 或 lines 中用同名字段为第 3 条的可写标准字段声明 default、default…"
+        },
+        {
+          "id": "1.6",
+          "summary": "IF 业务包用同名字段为引擎标准字段声明了不同的类型，为只读标准字段声明缺省值，或声明了 type、label 和第 5 条缺省属性以外的属性，THEN THE…"
+        },
+        {
+          "id": "1.7",
+          "summary": "THE Meta_Model SHALL 允许 qty、price、money、rate 类型字段声明非空的允许值列表，每个值为小数位数不超过字段精度的十进制字…"
+        },
+        {
+          "id": "1.8",
+          "summary": "THE Meta_Model SHALL 允许业务包把一个实体声明为组织上下文实体并指定其一个 bool 字段为缺省组织标识，缺省组织为该标识为 true 的记…"
+        },
+        {
+          "id": "1.9",
+          "summary": "IF 单据配置缺少 state_machine，或 state_machine 的取值不是 standard 或 simple，THEN THE Loader …"
+        },
+        {
+          "id": "1.10",
+          "summary": "THE Engine SHALL 只从业务包配置获得实体名、单据名、字段名和科目编码，由扫描测试验证：src/erp_mock/ 下 .py 文件的字符串字面量…"
+        },
+        {
+          "id": "1.11",
+          "summary": "IF 业务包的配置文件不符合对应配置对象的 JSON Schema（如缺少必填配置项、含未定义的配置项、default 值与字段类型不符、实体名或字段名不匹配 …"
+        },
+        {
+          "id": "1.12",
+          "summary": "IF ref 类型字段没有声明引用目标、字段名不以 _id 结尾，或去掉 _id 后与同一实体、表头或分录中的另一字段同名（按需求 13 第 3 条返回时键名冲…"
+        },
+        {
+          "id": "1.13",
+          "summary": "IF enum 类型字段的 values 为空、含重复的取值编码、含不匹配 ^[a-z][a-z0-9_]*$ 的编码，或某个取值缺少 zh 或 en 标签，T…"
+        },
+        {
+          "id": "1.14",
+          "summary": "IF 实例配置引用的业务包中，被声明为组织上下文实体或用户上下文实体的实体不是各恰好一个，THEN THE Loader SHALL 在需求 2 第 1 条所述…"
+        }
+      ]
+    },
+    {
+      "requirement": 2,
+      "title": "业务包与实例配置的加载校验",
+      "criteria": [
+        {
+          "id": "2.1",
+          "summary": "WHEN 执行 serve、stdio 或 validate 命令，THE Loader SHALL 对 --instance 目录中的实例配置和 instan…"
+        },
+        {
+          "id": "2.2",
+          "summary": "IF 某个校验步骤（含第 8 步之后的交叉检查）发现错误，THEN THE Loader SHALL 列出该步骤发现的全部错误（同一步骤内不在第一个错误处停止，…"
+        },
+        {
+          "id": "2.3",
+          "summary": "IF instance.yaml 的 packs 中某个包引用出现下列任一情况：版本不是 `<主>.<次>.<修订>` 形式的具体版本（各段为不带前导零的非负整…"
+        },
+        {
+          "id": "2.4",
+          "summary": "THE Loader SHALL 按以下写法解析 requires_meta_model 和 depends_on 的版本范围：范围由一个或多个以空格分隔的比较…"
+        },
+        {
+          "id": "2.5",
+          "summary": "IF 下列任一情况成立：某个业务包的 requires_meta_model 不符合第 4 条的写法或不匹配当前元模型版本（第 2 步检查）；depends_o…"
+        },
+        {
+          "id": "2.6",
+          "summary": "IF 下列任一情况成立：某个 pack.yaml 不符合 manifest 的 JSON Schema（如缺少 business-pack.md 第 4 节的必…"
+        },
+        {
+          "id": "2.7",
+          "summary": "IF 下列任一情况成立：实体名、单据名（即 bill_type）、单据分录名（`<单据>_line`）以及 stock_txn、stock_balance 之间…"
+        },
+        {
+          "id": "2.8",
+          "summary": "IF 某个业务包的 rule_prefix 为 GEN，某条包级规则的编号不是 `R-<本包 rule_prefix>-<序号>`（序号为 001 到 999 …"
+        },
+        {
+          "id": "2.9",
+          "summary": "IF 业务包配置按名称引用的实体、单据或字段不存在（如 ref 的目标实体、default_from 路径、conversion 的 source、target…"
+        },
+        {
+          "id": "2.10",
+          "summary": "IF 下列任一情况成立：profile 的 packs 含 instance.yaml 未引用的业务包，default_profile 不在 profiles …"
+        },
+        {
+          "id": "2.11",
+          "summary": "WHEN 全部校验通过，THE Loader SHALL 产出只读配置对象：运行期对该对象或其嵌套的任一属性、列表、映射赋值或增删元素的尝试均引发异常，且对象内…"
+        },
+        {
+          "id": "2.12",
+          "summary": "IF --instance 指定的目录不存在或其中没有 instance.yaml，或 instance.yaml 无法按 YAML 解析或不符合实例配置的 J…"
+        },
+        {
+          "id": "2.13",
+          "summary": "IF 下列任一情况成立：instance.yaml 的 profiles 或 datasets 列出的某个名称在实例配置的 profiles/ 或 datase…"
+        },
+        {
+          "id": "2.14",
+          "summary": "WHEN 执行第 8 步，THE Loader SHALL 为 instance.yaml 的 datasets 中的每个初始数据集取用第 8 步锚点日期下的 …"
+        }
+      ]
+    },
+    {
+      "requirement": 3,
+      "title": "工具描述的规范与校验",
+      "criteria": [
+        {
+          "id": "3.1",
+          "summary": "IF 业务包 manifest 的 description_variants 不包含 zh-detailed，或含有 zh-detailed、zh-brief、…"
+        },
+        {
+          "id": "3.2",
+          "summary": "IF 业务包 manifest 的 description_variants 中声明的某个变体没有为该业务包按需求 11 第 1 条生成的某个工具（已去掉 ex…"
+        },
+        {
+          "id": "3.3",
+          "summary": "IF 某个工具的 zh-detailed 工具描述按 Unicode 码位计数超过 400 个字符（空白、换行和标点均计入，参数描述不计入），THEN THE …"
+        },
+        {
+          "id": "3.4",
+          "summary": "IF description_variants 中任一已声明变体的工具描述或参数描述包含引导性用语清单中的任一词句，THEN THE Loader SHALL …"
+        },
+        {
+          "id": "3.5",
+          "summary": "IF description_variants 中任一已声明变体的工具描述或参数描述包含 Business_Data 中实体记录的名称（name）、编码（cod…"
+        },
+        {
+          "id": "3.6",
+          "summary": "IF enforcement 为 described 的规则的 description.zh 文本没有原样出现在 applies_to_tools 中某个工具的…"
+        },
+        {
+          "id": "3.7",
+          "summary": "THE Tool_Generator SHALL 令 tools/list 中每个业务包工具的 description 及其 inputSchema 中每个参数…"
+        },
+        {
+          "id": "3.8",
+          "summary": "IF enforcement 为 described 的规则的 applies_to_tools 为空，或含有该规则所在业务包未生成的工具名（按去掉 exclu…"
+        },
+        {
+          "id": "3.9",
+          "summary": "THE Tool_Generator SHALL 使用框架提供的 zh-detailed 文本作为内置工具 business_context_get 在 too…"
+        }
+      ]
+    },
+    {
+      "requirement": 4,
+      "title": "标识、编号与数值精度",
+      "criteria": [
+        {
+          "id": "4.1",
+          "summary": "WHEN 引擎新建实体记录或单据（含下推生成，以及 Seed_Builder 构建时的新建），THE Numbering_Primitive SHALL 分配内…"
+        },
+        {
+          "id": "4.2",
+          "summary": "WHEN 单据的分录被创建（create、下推生成，或 update 以 lines 整体替换分录），THE Numbering_Primitive SHALL…"
+        },
+        {
+          "id": "4.3",
+          "summary": "WHEN 引擎新建声明了 code（prefix、digits）的实体记录，THE Numbering_Primitive SHALL 生成编码 `<prefi…"
+        },
+        {
+          "id": "4.4",
+          "summary": "WHEN 引擎新建单据（含下推生成，以及 Seed_Builder 构建时的新建），THE Numbering_Primitive SHALL 分配编号 `<p…"
+        },
+        {
+          "id": "4.5",
+          "summary": "WHEN 写操作成功执行，THE Numbering_Primitive SHALL 把该操作的操作序号（第 11 条）写入单据表头：该操作新建或下推生成的单据…"
+        },
+        {
+          "id": "4.6",
+          "summary": "THE Numbering_Primitive SHALL 把 ID、编码、编号和操作序号的计数器保存在沙箱数据库中：Seed_Builder 开始构建 Sna…"
+        },
+        {
+          "id": "4.7",
+          "summary": "THE Engine SHALL 以 Decimal 计算和保存 qty、price、money、rate 值，不经过二进制浮点数，并把每个写入沙箱数据库或出现…"
+        },
+        {
+          "id": "4.8",
+          "summary": "THE Decimal_Formatter SHALL 按字段类型把 Decimal 值输出为十进制字符串：money 固定保留 2 位小数（如 \"1700.0…"
+        },
+        {
+          "id": "4.9",
+          "summary": "FOR ALL 类型 T（qty、price、money、rate）以及小数位数不超过 T 的精度的有限 Decimal 值 x、y（含负值、0 和 -0），T…"
+        },
+        {
+          "id": "4.10",
+          "summary": "FOR ALL 由 create、下推、update、delete、submit、unsubmit、approve、unapprove、close、unclos…"
+        },
+        {
+          "id": "4.11",
+          "summary": "THE Numbering_Primitive SHALL 为每个成功执行的写操作分配操作序号，取值为沙箱操作序号计数器加 1 后的值：写操作指新建实体记录或单…"
+        },
+        {
+          "id": "4.12",
+          "summary": "IF 写操作以任一错误码结束，THEN THE Numbering_Primitive SHALL 让 ID、编码、编号和操作序号计数器保持该操作开始前的值，因…"
+        }
+      ]
+    },
+    {
+      "requirement": 5,
+      "title": "基础资料与单据的增删改查",
+      "criteria": [
+        {
+          "id": "5.1",
+          "summary": "WHEN create 被调用或下推生成目标单据，THE CRUD_Primitive SHALL 为调用方输入和下推映射都没有填充的字段填充缺省值：defau…"
+        },
+        {
+          "id": "5.2",
+          "summary": "WHEN 对 draft 单据调用 update，THE CRUD_Primitive SHALL 用调用方提供的表头字段覆盖原值，未提供的可写表头字段保持原值…"
+        },
+        {
+          "id": "5.3",
+          "summary": "WHEN 对 source_bill_id 为空的 draft 单据调用 update 且参数中包含 lines，THE CRUD_Primitive SHAL…"
+        },
+        {
+          "id": "5.4",
+          "summary": "IF 对 source_bill_id 不为空（由下推生成）的 draft 单据调用 update 且参数中包含 lines，THEN THE CRUD_Pri…"
+        },
+        {
+          "id": "5.5",
+          "summary": "WHEN 对 draft 单据调用 delete，THE CRUD_Primitive SHALL 物理删除该单据的表头和全部分录，此后以该 ID 调用 get…"
+        },
+        {
+          "id": "5.6",
+          "summary": "IF 目标记录 id、表头或分录中的引用字段、search 与查询工具的引用型参数、下推的来源单据 ID 或 source_line_id 不是所声明类型的现有…"
+        },
+        {
+          "id": "5.7",
+          "summary": "IF create、update 或下推在本次调用中写入的引用（含缺省值和映射带入的引用）指向 status 为 disabled 的基础资料，THEN THE…"
+        },
+        {
+          "id": "5.8",
+          "summary": "IF 写入的 unique 字段值与同一实体或单据类型中另一条记录的该字段值完全相同（区分大小写，空值不参与比较），THEN THE CRUD_Primitiv…"
+        },
+        {
+          "id": "5.9",
+          "summary": "WHEN search 被调用，THE CRUD_Primitive SHALL 只匹配同时满足全部已提供条件的记录：至少一个 keyword_fields 字…"
+        },
+        {
+          "id": "5.10",
+          "summary": "THE CRUD_Primitive SHALL 在 search 的 items 中只返回以下摘要字段，不返回分录：实体为 id、code 和 name（实体…"
+        },
+        {
+          "id": "5.11",
+          "summary": "WHEN search 被调用，THE CRUD_Primitive SHALL 返回 total（全部匹配记录数）、page 和 page_size（实际使用…"
+        },
+        {
+          "id": "5.12",
+          "summary": "WHEN get 被调用，THE CRUD_Primitive SHALL 返回该记录的全部非内部字段（以下划线开头的内部列除外），值为空的字段返回 null …"
+        },
+        {
+          "id": "5.13",
+          "summary": "WHEN exposure.yaml 中由 source、params、filter、sort、returns 声明的查询被调用，THE CRUD_Primit…"
+        },
+        {
+          "id": "5.14",
+          "summary": "WHEN search 被调用，THE CRUD_Primitive SHALL 按 default_sort 所列字段和方向（未写方向时为升序）对匹配记录排序…"
+        },
+        {
+          "id": "5.15",
+          "summary": "IF search 的 page 或 page_size 小于 1，THEN THE Tool_Layer SHALL 返回 VALIDATION_FAILED…"
+        },
+        {
+          "id": "5.16",
+          "summary": "WHEN create 或 update 成功，THE CRUD_Primitive SHALL 返回与紧接着以同一 ID 调用 get 所得结果相同的对象。"
+        }
+      ]
+    },
+    {
+      "requirement": 6,
+      "title": "计价与单位换算",
+      "criteria": [
+        {
+          "id": "6.1",
+          "summary": "WHEN create、update（含只修改表头字段的 update）或下推写入启用 pricing 的单据，且写入后该单据的 price_includes_…"
+        },
+        {
+          "id": "6.2",
+          "summary": "WHEN create、update（含只修改表头字段的 update）或下推写入启用 pricing 的单据，且写入后该单据的 price_includes_…"
+        },
+        {
+          "id": "6.3",
+          "summary": "WHEN create 或下推生成启用 pricing 的单据，且 price_includes_tax 既没有由调用方输入，也没有由 header_mappi…"
+        },
+        {
+          "id": "6.4",
+          "summary": "THE Pricing_Primitive SHALL 使启用 pricing 的单据在每次写入后，表头 amount、tax_amount、amount_wi…"
+        },
+        {
+          "id": "6.5",
+          "summary": "FOR ALL 随机生成的启用 pricing 的单据（1 到 200 个分录；qty 取 0.0001 到 100000000 之间、最多 4 位小数的值，p…"
+        },
+        {
+          "id": "6.6",
+          "summary": "WHEN create、update 或下推写入分录声明了数量语义的单据，THE Unit_Conversion_Primitive SHALL 为物料引用、计…"
+        },
+        {
+          "id": "6.7",
+          "summary": "IF 写入后某个分录的物料引用和计量单位引用均不为空值，计量单位不是该物料的基本单位，且该物料没有以该计量单位为换算单位的换算关系，THEN THE Unit_…"
+        },
+        {
+          "id": "6.8",
+          "summary": "THE Unit_Conversion_Primitive SHALL 按业务包配置确定单位换算涉及的实体和字段，引擎代码不写死其名称：物料实体为分录数量语义中…"
+        },
+        {
+          "id": "6.9",
+          "summary": "WHEN 对物料实体执行 get（含按需求 5 第 16 条返回的 create、update 结果），THE Unit_Conversion_Primitiv…"
+        },
+        {
+          "id": "6.10",
+          "summary": "IF create、update 或下推写入后启用 pricing 的单据中某个分录的 qty、price、tax_rate 任一为空值，THEN THE Pr…"
+        },
+        {
+          "id": "6.11",
+          "summary": "IF 写入的换算关系的换算系数为空值或不大于 0，换算单位为空值或等于所属物料的基本单位，或所属物料已有换算单位相同的另一条换算关系，THEN THE Unit…"
+        },
+        {
+          "id": "6.12",
+          "summary": "IF 某个单据的分录声明了数量语义，而其物料引用字段所指实体没有声明基本单位字段，基本单位字段不是指向该分录计量单位引用字段所指实体的必填 ref 字段，该物料…"
+        }
+      ]
+    },
+    {
+      "requirement": 7,
+      "title": "预置状态机",
+      "criteria": [
+        {
+          "id": "7.1",
+          "summary": "WHEN standard 单据的 create、下推生成、update、submit、unsubmit、approve、unapprove、close、unc…"
+        },
+        {
+          "id": "7.2",
+          "summary": "WHEN simple 单据的 create、下推生成、update、approve、unapprove 或 delete 成功执行，THE State_Mac…"
+        },
+        {
+          "id": "7.3",
+          "summary": "IF 对状态不是 draft 的单据（standard 的 submitted、approved、closed，simple 的 approved）执行 upd…"
+        },
+        {
+          "id": "7.4",
+          "summary": "IF 执行 submit、unsubmit、approve、unapprove、close 或 unclose 时单据当前状态不是第 1、2 条为该操作规定的前…"
+        },
+        {
+          "id": "7.5",
+          "summary": "IF standard 单据 submit 或 simple 单据 approve 时单据没有分录，或任一必填字段的值为空值，THEN THE State_Ma…"
+        },
+        {
+          "id": "7.6",
+          "summary": "WHEN approve 通过写入前的全部校验（需求 12 第 1 条），THE State_Machine_Primitive SHALL 在同一事务中把单据…"
+        },
+        {
+          "id": "7.7",
+          "summary": "WHEN unapprove 通过写入前的全部校验（含需求 8 第 10 条的 R-GEN-003），THE State_Machine_Primitive S…"
+        },
+        {
+          "id": "7.8",
+          "summary": "WHEN 单据转为 closed，THE State_Machine_Primitive SHALL 在以下划线开头的内部列中记录关闭方式：经 close 操作…"
+        },
+        {
+          "id": "7.9",
+          "summary": "IF unclose 的目标单据关闭方式为自动，THEN THE State_Machine_Primitive SHALL 返回 INVALID_STATE，…"
+        },
+        {
+          "id": "7.10",
+          "summary": "IF approve 或 unapprove 执行联动或反写时任一步骤失败（如需求 9 第 4 条的负库存），THEN THE State_Machine_Pr…"
+        },
+        {
+          "id": "7.11",
+          "summary": "IF state_machine 为 simple 的单据在 operations 中声明了 submit、unsubmit、close 或 unclose，或…"
+        }
+      ]
+    },
+    {
+      "requirement": 8,
+      "title": "下推与反写",
+      "criteria": [
+        {
+          "id": "8.1",
+          "summary": "WHEN 下推被调用且全部校验通过，THE Conversion_Primitive SHALL 生成一张目标单据草稿：目标分录与调用方 lines 的元素一一…"
+        },
+        {
+          "id": "8.2",
+          "summary": "WHEN 下推生成草稿，THE Conversion_Primitive SHALL 在应用映射和调用方输入之后，只为 header_mapping、line_…"
+        },
+        {
+          "id": "8.3",
+          "summary": "IF 下推时源单的当前状态不等于 conversion 的 require_source_status（例如 require_source_status 为 a…"
+        },
+        {
+          "id": "8.4",
+          "summary": "IF lines 中的 source_line_id 都指向存在的分录，但其中有分录不属于 `<来源简称>_id` 所指定的源单，THEN THE Conver…"
+        },
+        {
+          "id": "8.5",
+          "summary": "IF limit_by 为 qty，且引用某个源行的全部分录在本次下推中的 qty_base 合计大于该源行在本次下推前的 Pushable_Qty（占用只计同…"
+        },
+        {
+          "id": "8.6",
+          "summary": "IF limit_by 为 amount，且目标单据的 amount_with_tax 大于源单在本次下推前的 Pushable_Qty（即可下推金额，占用只计…"
+        },
+        {
+          "id": "8.7",
+          "summary": "WHEN 一次下推中有多个分录的 source_line_id 相同，THE Conversion_Primitive SHALL 接受这些分录而不报重复错误，…"
+        },
+        {
+          "id": "8.8",
+          "summary": "WHEN 由下推生成的目标单据审核，THE Conversion_Primitive SHALL 按 writeback 配置更新源单的 link_field（…"
+        },
+        {
+          "id": "8.9",
+          "summary": "WHEN 由下推生成的目标单据反审核，THE Conversion_Primitive SHALL 逆向执行反写，从相应源行或源单表头的 link_field …"
+        },
+        {
+          "id": "8.10",
+          "summary": "IF 对 approved 单据执行 unapprove 时存在 source_bill_id 等于该单据 ID 的未删除单据（由任一 conversion 生…"
+        },
+        {
+          "id": "8.11",
+          "summary": "FOR ALL 由新建、下推、提交、撤回提交、审核、反审核、关闭、反关闭、删除组成的随机操作序列（需求 25 第 2 条），THE Conversion_Pri…"
+        },
+        {
+          "id": "8.12",
+          "summary": "WHEN 下推成功，THE Conversion_Primitive SHALL 保持源单表头和全部分录的字段值不变，包括 status、link_field …"
+        },
+        {
+          "id": "8.13",
+          "summary": "WHEN 由下推生成的目标单据审核，且反写后其源单状态为 approved 并满足所属 writeback 的 auto_close_source_when，T…"
+        },
+        {
+          "id": "8.14",
+          "summary": "WHEN 由下推生成的目标单据反审核，且逆向反写后其源单状态为 closed、关闭方式为自动并且不再满足 auto_close_source_when，THE …"
+        }
+      ]
+    },
+    {
+      "requirement": 9,
+      "title": "库存联动",
+      "criteria": [
+        {
+          "id": "9.1",
+          "summary": "WHEN 配置了 inventory 联动的单据执行 approve，THE Inventory_Primitive SHALL 为每个分录写库存流水（in、o…"
+        },
+        {
+          "id": "9.2",
+          "summary": "THE Inventory_Primitive SHALL 按联动配置的 direction 确定 qty_delta，其中 qty_base 为分录的基本单位…"
+        },
+        {
+          "id": "9.3",
+          "summary": "IF transfer 方向的 inventory 联动配置没有同时声明调出仓和调入仓字段，adjust 方向的 inventory 联动配置没有声明增减方向字…"
+        },
+        {
+          "id": "9.4",
+          "summary": "IF 审核或反审核使任一（物料，仓库）的即时库存小于 0，THEN THE Inventory_Primitive SHALL 返回 BUSINESS_RULE…"
+        },
+        {
+          "id": "9.5",
+          "summary": "THE Inventory_Primitive SHALL 对每个（物料，仓库）以操作前的即时库存（没有即时库存记录时按 0 计）加上本次审核或反审核在其上产生…"
+        },
+        {
+          "id": "9.6",
+          "summary": "WHEN 配置了 inventory 联动的单据执行 unapprove，THE Inventory_Primitive SHALL 删除该单据审核时写入的全部…"
+        },
+        {
+          "id": "9.7",
+          "summary": "WHEN 业务包在 exposure.yaml 的 queries 中引用的即时库存查询被调用，THE Inventory_Primitive SHALL 按可…"
+        },
+        {
+          "id": "9.8",
+          "summary": "FOR ALL 由新建、下推、提交、审核、反审核、删除组成的随机操作序列（含以错误结束的操作），THE Inventory_Primitive SHALL 在每…"
+        },
+        {
+          "id": "9.9",
+          "summary": "FOR ALL 同一单据分录的不同排列顺序，THE Inventory_Primitive SHALL 在审核时得到相同的 R-GEN-007 校验结果（是否违…"
+        },
+        {
+          "id": "9.10",
+          "summary": "THE Inventory_Primitive SHALL 只为至少有一条库存流水的（物料，仓库）保存即时库存记录：写入该（物料，仓库）的第一条库存流水时新建记…"
+        },
+        {
+          "id": "9.11",
+          "summary": "IF inventory 联动配置的仓库字段（in、out、adjust 方向的仓库字段，transfer 方向的调出仓和调入仓字段）不是所属单据表头或分录中的…"
+        },
+        {
+          "id": "9.12",
+          "summary": "WHEN 即时库存查询被调用，THE Inventory_Primitive SHALL 按物料 ID、再按仓库 ID 升序排列结果，按 page（缺省 1）和…"
+        }
+      ]
+    },
+    {
+      "requirement": 10,
+      "title": "规则表达式与业务规则",
+      "criteria": [
+        {
+          "id": "10.1",
+          "summary": "THE Rule_Expression_Parser SHALL 把符合以下语法的 check 和 filter 文本解析为语法树：字段路径为 header.<…"
+        },
+        {
+          "id": "10.2",
+          "summary": "IF enforced 规则的 check 或 exposure.yaml 声明式查询的 filter 不符合第 1 条的语法，含有在求值对象中无法解析的名称（…"
+        },
+        {
+          "id": "10.3",
+          "summary": "THE Rule_Expression_Printer SHALL 把语法树输出为规范文本，使只在空白或冗余括号（去掉后解析结果不变的括号）上不同的表达式文本解…"
+        },
+        {
+          "id": "10.4",
+          "summary": "FOR ALL 符合第 1 条语法的表达式语法树 t（不要求通过第 11 条的类型检查），THE Rule_Expression_Parser SHALL 满足…"
+        },
+        {
+          "id": "10.5",
+          "summary": "THE Rule_Engine SHALL 在本次操作完成后的单据上对 check 求值：create（含下推生成）取应用调用方输入、下推映射和缺省值并按需求 …"
+        },
+        {
+          "id": "10.6",
+          "summary": "THE Rule_Engine SHALL 按三值逻辑处理空值：值为空的字段、经值为空的 ref 字段展开得到的路径值、任一操作数为空值的四则运算结果和除数为 …"
+        },
+        {
+          "id": "10.7",
+          "summary": "IF 适用于本次操作（第 9 条）的 enforced 规则不满足，即不引用 line 的表达式结果为假，或引用 line 的表达式在至少一个分录上结果为假（没…"
+        },
+        {
+          "id": "10.8",
+          "summary": "THE Rule_Engine SHALL 在需求 12 第 1 条的业务规则步骤中按固定顺序检查适用于本次操作的规则，在第一条不满足的规则处停止并返回该规则的…"
+        },
+        {
+          "id": "10.9",
+          "summary": "THE Rule_Engine SHALL 只在被操作单据的类型等于 enforced 规则的 bill 且本次操作列在该规则的 on 中时对该规则的 chec…"
+        },
+        {
+          "id": "10.10",
+          "summary": "WHEN exposure.yaml 中声明了 filter 的查询被调用，THE Rule_Engine SHALL 按第 6、12、13 条的语义对每条 s…"
+        },
+        {
+          "id": "10.11",
+          "summary": "THE Rule_Engine SHALL 按以下规则为表达式定型：int、qty、price、money、rate 字段、数字字面量以及四则运算、count、…"
+        },
+        {
+          "id": "10.12",
+          "summary": "THE Rule_Engine SHALL 对非空操作数按以下语义求值：数值以 Decimal 计算，四则运算结果按 28 位有效数字和 ROUND_HALF_…"
+        },
+        {
+          "id": "10.13",
+          "summary": "THE Rule_Engine SHALL 按以下语义求值函数：sum(lines.F) 为当前单据（规则中为第 5 条的被操作单据，filter 中为 sou…"
+        }
+      ]
+    },
+    {
+      "requirement": 11,
+      "title": "semantic 工具生成",
+      "criteria": [
+        {
+          "id": "11.1",
+          "summary": "THE Tool_Generator SHALL 在加载第 6 步为每个 operations 动作生成 `<实体>_<动作>`，为每个 conversion …"
+        },
+        {
+          "id": "11.2",
+          "summary": "IF 生成或 rename 后的工具名不匹配 ^[a-z][a-z0-9_]{0,63}$，下推工具不符合 `<目标单据>_create_from_<来源简称>…"
+        },
+        {
+          "id": "11.3",
+          "summary": "THE Tool_Generator SHALL 令每个 inputSchema 只使用 tool-design.md 第 4 节兼容性要求所列的 14 个关键…"
+        },
+        {
+          "id": "11.4",
+          "summary": "THE Tool_Generator SHALL 生成入参：create 含可写字段，单据的 create 另含 lines（minItems 1）；updat…"
+        },
+        {
+          "id": "11.5",
+          "summary": "THE Tool_Generator SHALL 把 biz_date 筛选生成为 date_from、date_to，把其他 date 类型筛选字段 F 生成…"
+        },
+        {
+          "id": "11.6",
+          "summary": "THE Tool_Generator SHALL 把 qty、price、money、rate 设为 number，page_size 设 maximum 10…"
+        },
+        {
+          "id": "11.7",
+          "summary": "THE Tool_Generator SHALL 为每个工具生成 type 为 object 的 outputSchema，使该工具的每个成功结果按需求 13 …"
+        },
+        {
+          "id": "11.8",
+          "summary": "THE Tool_Generator SHALL 令 openWorldHint 均为 false，readOnlyHint 只在 search、get、que…"
+        },
+        {
+          "id": "11.9",
+          "summary": "THE Tool_Generator SHALL 按固定顺序输出工具：business_context_get 在前，其后按 profile 的 packs 顺…"
+        },
+        {
+          "id": "11.10",
+          "summary": "FOR ALL 同一实例配置版本和 profile，THE Tool_Generator SHALL 在任意两次启动中生成逐字节一致的 tools/list 结…"
+        },
+        {
+          "id": "11.11",
+          "summary": "THE Tool_Generator SHALL 按 meta-model.md 第 3 节类型表生成类型，为 string、text 设 maxLength，…"
+        },
+        {
+          "id": "11.12",
+          "summary": "THE Tool_Generator SHALL 只把 required 为 true 或为 pricing 分录 qty、price，且未声明缺省值的字段列入…"
+        },
+        {
+          "id": "11.13",
+          "summary": "THE Tool_Generator SHALL 以 conversion 所在业务包的 exposure.yaml 中 source_short_names …"
+        },
+        {
+          "id": "11.14",
+          "summary": "IF exposure.yaml 的 exclude 或 rename 中出现本包按第 1 条未生成的工具名，或同一工具同时出现在 exclude 和 rena…"
+        }
+      ]
+    },
+    {
+      "requirement": 12,
+      "title": "工具调用的入参处理与校验顺序",
+      "criteria": [
+        {
+          "id": "12.1",
+          "summary": "THE Tool_Layer SHALL 按固定顺序处理 tools/call，任一步骤出错即返回该错误、不执行后续步骤：资源上限（需求 23 第 8 条）、s…"
+        },
+        {
+          "id": "12.2",
+          "summary": "IF 参数不符合工具的 inputSchema（第 3、5 条除外），date 不是有效日期（如 2026-02-30），或分录数量舍入到 4 位小数后不大于 …"
+        },
+        {
+          "id": "12.3",
+          "summary": "IF page_size 为大于 100 的整数，或 lines 为多于 200 个元素的数组（需求 11 第 6 条的 maximum 与 maxItems）…"
+        },
+        {
+          "id": "12.4",
+          "summary": "WHEN qty、price、money、rate 参数以 JSON 数字传入，THE Tool_Layer SHALL 把该参数转换为 Decimal，有效数…"
+        },
+        {
+          "id": "12.5",
+          "summary": "WHEN 需求 11 第 6 条声明为 number 的参数以匹配 ^-?[0-9]+(\\.[0-9]+)?$ 的十进制字符串传入，THE Tool_Layer…"
+        },
+        {
+          "id": "12.6",
+          "summary": "WHEN qty、price、money、rate 参数的小数位数超过字段精度，THE Tool_Layer SHALL 在参数归一化步骤按 ROUND_HAL…"
+        },
+        {
+          "id": "12.7",
+          "summary": "THE Tool_Layer SHALL 在同一个数据库事务中执行一次 tools/call 的全部写入（含联动、反写和计数器），调用以任一错误码结束时回滚该事…"
+        },
+        {
+          "id": "12.8",
+          "summary": "IF 处理 tools/call 时出现带错误码的业务异常以外的异常，THEN THE Tool_Layer SHALL 回滚该调用的全部写入并返回 INTER…"
+        },
+        {
+          "id": "12.9",
+          "summary": "FOR ALL 沙箱状态 s 和使调用出错的工具名与参数 a，THE Tool_Layer SHALL 在两个状态均为 s 的沙箱中对 a 返回逐字节相同的错误…"
+        },
+        {
+          "id": "12.10",
+          "summary": "THE Tool_Layer SHALL 在第 1 条的步骤之间执行以下检查：source_line_id 归属（需求 8 第 4 条）在引用存在性之后、单据状…"
+        },
+        {
+          "id": "12.11",
+          "summary": "THE Tool_Layer SHALL 在业务规则步骤通过后、执行写入之前检查唯一性（需求 5 第 8 条），因此同一调用同时违反业务规则和唯一性时只返回业务…"
+        },
+        {
+          "id": "12.12",
+          "summary": "THE Tool_Layer SHALL 按出错参数在 inputSchema 中的声明顺序排列第 2 条的 details，lines 中的错误按数组下标升序…"
+        },
+        {
+          "id": "12.13",
+          "summary": "IF 声明为 number 的参数以 JSON 布尔值或不匹配第 5 条写法的字符串（如 \"1e3\"、\" 5\"、\"1,000\"）传入，THEN THE Tool…"
+        }
+      ]
+    },
+    {
+      "requirement": 13,
+      "title": "工具返回与错误结果",
+      "criteria": [
+        {
+          "id": "13.1",
+          "summary": "WHEN 工具调用成功，THE Tool_Layer SHALL 返回 isError 为 false 的工具结果：structuredContent 为 JS…"
+        },
+        {
+          "id": "13.2",
+          "summary": "WHEN 下推工具（`<目标单据>_create_from_<来源简称>`）或 submit、unsubmit、approve、unapprove、close、…"
+        },
+        {
+          "id": "13.3",
+          "summary": "THE Tool_Layer SHALL 在成功结果任一层级的对象中（含表头、分录、items 中的摘要和查询结果），把 ref 类型字段和 source_bi…"
+        },
+        {
+          "id": "13.4",
+          "summary": "THE Tool_Layer SHALL 在成功结果和错误 details 中按以下格式返回值：qty、price、money、rate 类型的值为 Decim…"
+        },
+        {
+          "id": "13.5",
+          "summary": "IF 成功结果的 text 按 UTF-8 编码超过 16 KB（16384 字节），THEN THE Tool_Layer SHALL 从顶层明细数组（列表结…"
+        },
+        {
+          "id": "13.6",
+          "summary": "IF tools/call 以任一错误码结束（含 schema 校验阶段的 VALIDATION_FAILED、LIMIT_EXCEEDED 和 INTERNA…"
+        },
+        {
+          "id": "13.7",
+          "summary": "THE Tool_Layer SHALL 用简体中文书写错误 message：message 非空且至少含一个汉字，字段路径、记录 ID、单据编号、规则编号和枚…"
+        },
+        {
+          "id": "13.8",
+          "summary": "THE Tool_Layer SHALL 在错误由引擎规则 R-GEN-001 到 R-GEN-007 或包级 enforced 规则判定时，令错误对象的 ru…"
+        },
+        {
+          "id": "13.9",
+          "summary": "WHEN delete 工具调用成功，THE Tool_Layer SHALL 返回被删除记录在删除前的完整对象，该对象与删除前紧接着对该记录执行 get 操作…"
+        },
+        {
+          "id": "13.10",
+          "summary": "IF tools/call 以 INTERNAL_ERROR 结束（需求 12 第 8 条），THEN THE Tool_Layer SHALL 在错误对象中使…"
+        }
+      ]
+    },
+    {
+      "requirement": 14,
+      "title": "MCP 传输、地址与协议行为",
+      "criteria": [
+        {
+          "id": "14.1",
+          "summary": "THE Gateway SHALL 用官方 MCP Python SDK 提供 Streamable HTTP 和 stdio 两种传输：前者由 serve 命…"
+        },
+        {
+          "id": "14.2",
+          "summary": "THE Gateway SHALL 按以下规则确定会话的 profile 和初始数据集：MCP 端口的 /mcp、/p/<profile>/mcp、/d/<da…"
+        },
+        {
+          "id": "14.3",
+          "summary": "IF MCP 端口收到的请求路径不属于第 2 条的五种地址，路径中的 profile 或初始数据集不在实例配置中（名称区分大小写），或 sandbox_id 不…"
+        },
+        {
+          "id": "14.4",
+          "summary": "WHEN 收到 initialize，THE Gateway SHALL 返回 capabilities 只含 tools 一项且 tools.listChan…"
+        },
+        {
+          "id": "14.5",
+          "summary": "WHEN 会话收到 tools/list，THE Gateway SHALL 在一个响应中按需求 11 第 9 条的顺序返回该会话 profile 的全部工具，…"
+        },
+        {
+          "id": "14.6",
+          "summary": "IF tools/call 的工具名不在该会话 profile 的工具中，THEN THE Gateway SHALL 返回 code 为 -32602 且 m…"
+        },
+        {
+          "id": "14.7",
+          "summary": "IF HTTP 请求携带的 Mcp-Session-Id 不存在、已终止、由另一路径（按字面比较）上的 initialize 分配，或其绑定的沙箱已冻结或已删除…"
+        },
+        {
+          "id": "14.8",
+          "summary": "IF initialize 以外的 HTTP 请求没有携带 Mcp-Session-Id，THEN THE Gateway SHALL 返回 HTTP 400，…"
+        },
+        {
+          "id": "14.9",
+          "summary": "WHILE 服务经 stdio 命令运行，或经 serve 运行且 --host 为回环地址、没有配置 MCP 端点令牌，THE Gateway SHALL 使…"
+        },
+        {
+          "id": "14.10",
+          "summary": "IF 会话收到 initialize、ping、tools/list、tools/call 以外的请求方法（如 resources/list、prompts/l…"
+        },
+        {
+          "id": "14.11",
+          "summary": "THE Gateway SHALL 不向客户端发起任何请求（如 sampling/createMessage、roots/list），也不发送任何通知。"
+        },
+        {
+          "id": "14.12",
+          "summary": "IF stdio 命令的 --profile 或 --dataset 不在实例配置中，THEN THE CLI SHALL 在 stderr 输出指出该选项及其…"
+        }
+      ]
+    },
+    {
+      "requirement": 15,
+      "title": "会话与沙箱生命周期",
+      "criteria": [
+        {
+          "id": "15.1",
+          "summary": "WHEN Gateway 在 /mcp、/p/<profile>/mcp、/d/<dataset>/mcp 或 /p/<profile>/d/<dataset>…"
+        },
+        {
+          "id": "15.2",
+          "summary": "WHEN stdio 进程首次收到 initialize，THE Sandbox_Manager SHALL 按第 1 条的方式新建沙箱并绑定到该进程（prof…"
+        },
+        {
+          "id": "15.3",
+          "summary": "WHEN Gateway 在 /s/<sandbox_id>/mcp 收到 initialize，且该请求未按需求 14 第 3 条被拒绝，THE Sandbo…"
+        },
+        {
+          "id": "15.4",
+          "summary": "THE Sandbox_Manager SHALL 按服务收到请求的先后顺序逐个执行同一沙箱的 MCP 请求（含绑定该沙箱的全部会话）以及 Admin API …"
+        },
+        {
+          "id": "15.5",
+          "summary": "WHEN active 沙箱自创建或最近一次调用处理完毕起连续超过空闲阈值（缺省 5 分钟）没有调用，THE Sandbox_Manager SHALL 在条件…"
+        },
+        {
+          "id": "15.6",
+          "summary": "WHEN idle 沙箱收到调用（第 5 条），THE Sandbox_Manager SHALL 重新打开数据库连接，把沙箱恢复为 active 后再处理该调…"
+        },
+        {
+          "id": "15.7",
+          "summary": "WHEN 下列任一情况发生：自动创建（第 1、2 条）的沙箱所绑定的会话终止（收到该会话的 HTTP DELETE，或 stdio 进程按需求 22 第 4 条…"
+        },
+        {
+          "id": "15.8",
+          "summary": "WHEN 绑定预建沙箱的某个会话终止（收到该会话的 HTTP DELETE），THE Sandbox_Manager SHALL 只解除该会话的绑定，沙箱的状态…"
+        },
+        {
+          "id": "15.9",
+          "summary": "WHEN frozen 沙箱自转为 frozen 起超过保留期（缺省 7 天），或 Admin API 请求删除任一状态的沙箱，THE Sandbox_Mana…"
+        },
+        {
+          "id": "15.10",
+          "summary": "IF 非 frozen 沙箱（含 idle 沙箱和预建沙箱）的数量已达到并发上限（缺省 256），THEN THE Gateway SHALL 对 /mcp、/…"
+        },
+        {
+          "id": "15.11",
+          "summary": "THE Sandbox_Manager SHALL 使用服务启动时配置的空闲阈值、冻结阈值、保留期和并发上限，未配置的项依次取 5 分钟、30 分钟、7 天和 …"
+        },
+        {
+          "id": "15.12",
+          "summary": "WHILE 沙箱处于 frozen，THE Sandbox_Manager SHALL 使该沙箱保持只读：数据库内容、trace、锚点日期和状态都保持不变，直到…"
+        },
+        {
+          "id": "15.13",
+          "summary": "THE Sandbox_Manager SHALL 为每个沙箱使用独立的数据库文件，使任一沙箱中的写入（含 Admin API 的重置和恢复）不改变其他沙箱的数…"
+        },
+        {
+          "id": "15.14",
+          "summary": "IF 第 1、2 条创建沙箱时所需 Snapshot 的构建失败（如不变量不成立），THEN THE Gateway SHALL 对该 initialize 返…"
+        }
+      ]
+    },
+    {
+      "requirement": 16,
+      "title": "相对时钟与日期表达式",
+      "criteria": [
+        {
+          "id": "16.1",
+          "summary": "WHEN 沙箱创建（需求 15 第 1、2 条，或经 Admin API 预建），THE Clock SHALL 按以下优先级确定一次锚点日期：沙箱级指定的日期…"
+        },
+        {
+          "id": "16.2",
+          "summary": "THE Sandbox_Manager SHALL 把锚点日期记录在沙箱元数据中，并在沙箱存续期间保持不变：跨越自然日、经 Admin API 重置或恢复 Na…"
+        },
+        {
+          "id": "16.3",
+          "summary": "IF clock.mode 不是 today 或 fixed，clock.mode 为 fixed 而没有提供 clock.anchor_date，clock.…"
+        },
+        {
+          "id": "16.4",
+          "summary": "THE Date_Expression_Parser SHALL 按调用方所需的类别解析全小写、不含空白字符的文本：日期类接受 today、today+Nd、t…"
+        },
+        {
+          "id": "16.5",
+          "summary": "WHEN 以锚点日期 a 求值表达式，THE Clock SHALL 按以下定义得到结果：today 为 a；today+Nd、today-Nd 为 a 之后、…"
+        },
+        {
+          "id": "16.6",
+          "summary": "IF 文本不是所需类别的合法表达式（如 Today、today+0d、today + 3d、month(-1).day(32)，或在日期类中写 month(0)…"
+        },
+        {
+          "id": "16.7",
+          "summary": "THE Date_Expression_Printer SHALL 把语法树输出为符合第 4 条的文本，且对任一被第 4 条接受的文本 s，print(pars…"
+        },
+        {
+          "id": "16.8",
+          "summary": "FOR ALL 合法的日期类与期间类语法树 e（属性测试覆盖第 4 条的全部形式和 7 个星期名，month、quarter、year 的 N 覆盖 0、负数和…"
+        },
+        {
+          "id": "16.9",
+          "summary": "FOR ALL 1900-01-01 到 2100-12-31 之间的锚点日期 a、-1200 到 1200 之间的整数 N 和 1 到 31 之间的整数 D，…"
+        },
+        {
+          "id": "16.10",
+          "summary": "WHEN business_context_get 被调用，THE Engine SHALL 依次返回 business_date（锚点日期，YYYY-MM-D…"
+        },
+        {
+          "id": "16.11",
+          "summary": "FOR ALL 1900-01-01 到 2100-12-31 之间的锚点日期 a 和星期名 W，THE Clock SHALL 使 this_week.mon…"
+        },
+        {
+          "id": "16.12",
+          "summary": "FOR ALL 1900-01-01 到 2100-12-31 之间的锚点日期 a 和 -1200 到 1200 之间的整数 N，THE Clock SHALL…"
+        },
+        {
+          "id": "16.13",
+          "summary": "IF stdio、validate 或 seed 命令的 --anchor-date 不是第 3 条所述的有效 YYYY-MM-DD 日期（如 2026-02-…"
+        }
+      ]
+    },
+    {
+      "requirement": 17,
+      "title": "trace",
+      "criteria": [
+        {
+          "id": "17.1",
+          "summary": "THE Trace_Writer SHALL 为每个沙箱在沙箱目录中写一个 trace.jsonl 文件：UTF-8 编码，每行是一个以换行符结尾的 JSON …"
+        },
+        {
+          "id": "17.2",
+          "summary": "THE Trace_Writer SHALL 使每个事件依次以 seq、ts、sandbox_id、session_id、instance、profile、da…"
+        },
+        {
+          "id": "17.3",
+          "summary": "WHEN 写入 tools_call 事件，THE Trace_Writer SHALL 在公共字段之后依次写入 tool、args、coerced、known…"
+        },
+        {
+          "id": "17.4",
+          "summary": "WHEN tools/call 成功，THE Trace_Writer SHALL 在 writes 中为本次调用改动的每个（记录，来源）列一项，依次含 ent…"
+        },
+        {
+          "id": "17.5",
+          "summary": "WHEN tools/call 以任一错误码结束（含 schema 校验阶段的错误、INTERNAL_ERROR 和需求 23 第 8 条的 LIMIT_EXC…"
+        },
+        {
+          "id": "17.6",
+          "summary": "THE Trace_Writer SHALL 在对应请求的响应（MCP 响应或 Admin API 响应）发出之前把事件完整写入 trace 文件，使收到响应后…"
+        },
+        {
+          "id": "17.7",
+          "summary": "THE Trace_Writer SHALL 把 trace 文件存放在沙箱数据库文件之外，使重置、恢复 Named_Snapshot 和创建 Named_Sn…"
+        },
+        {
+          "id": "17.8",
+          "summary": "FOR ALL trace 事件 e（字符串可含换行符、引号、反斜杠、非 ASCII 字符和 BMP 以外的字符），THE Trace_Writer SHALL…"
+        },
+        {
+          "id": "17.9",
+          "summary": "THE Trace_Writer SHALL 按以下对应关系写事件：每个被接受的 initialize 写 session_start，tools/list 写…"
+        },
+        {
+          "id": "17.10",
+          "summary": "IF tools/call 的工具名不在该会话 profile 中，THEN THE Trace_Writer SHALL 在对应的 tools_call 事件…"
+        },
+        {
+          "id": "17.11",
+          "summary": "THE Trace_Writer SHALL 在 coerced 中列出本次调用按需求 12 第 5 条由十进制字符串转换的全部参数路径（写法同需求 12 第 …"
+        }
+      ]
+    },
+    {
+      "requirement": 18,
+      "title": "state diff",
+      "criteria": [
+        {
+          "id": "18.1",
+          "summary": "WHEN 请求 diff（Admin API 的 diff 接口、批量导出或 stdio 进程退出），THE Diff_Builder SHALL 比较沙箱当前…"
+        },
+        {
+          "id": "18.2",
+          "summary": "THE Diff_Builder SHALL 按（entity，id）比对基准与当前状态并只输出净变化：只在当前状态中存在的记录为 insert，只在基准中存在…"
+        },
+        {
+          "id": "18.3",
+          "summary": "THE Diff_Builder SHALL 令每条变化的 cause_seqs 为 writes（需求 17 第 4 条）含该记录、且只属于当前状态与基准二者…"
+        },
+        {
+          "id": "18.4",
+          "summary": "THE Diff_Builder SHALL 覆盖实体记录（entity 为实体名）、单据表头（entity 为单据名）、单据分录（entity 为 `<单据>…"
+        },
+        {
+          "id": "18.5",
+          "summary": "THE Diff_Builder SHALL 在 before 和 after 中使用存储字段名（ref 字段保留 _id 后缀，不展开为嵌套对象）并按字段类型…"
+        },
+        {
+          "id": "18.6",
+          "summary": "THE Diff_Builder SHALL 按 entity、再按 id 的 Unicode 码点升序输出 changes；每条变化的键依次为 entity、…"
+        },
+        {
+          "id": "18.7",
+          "summary": "WHEN 基准之后没有净变化，THE Diff_Builder SHALL 输出 changes 为空数组的 diff，其他键照常输出。"
+        },
+        {
+          "id": "18.8",
+          "summary": "THE Diff_Builder SHALL 以 `<来源分录 ID>:<仓库 ID>:<方向>` 作为 stock_txn 记录的 id，方向对需求 9 第 …"
+        },
+        {
+          "id": "18.9",
+          "summary": "THE Diff_Builder SHALL 使 op 为 insert 的变化只含 after、为 delete 的变化只含 before，二者含该记录除 i…"
+        },
+        {
+          "id": "18.10",
+          "summary": "THE Sandbox_Manager SHALL 为沙箱当前状态和每个 Named_Snapshot 记录生效调用：沙箱创建时为空；writes 非空的 to…"
+        }
+      ]
+    },
+    {
+      "requirement": 19,
+      "title": "Admin API",
+      "criteria": [
+        {
+          "id": "19.1",
+          "summary": "THE Admin_API SHALL 在 serve 进程中只监听 127.0.0.1 的 --admin-port 端口，提供 integration.md…"
+        },
+        {
+          "id": "19.2",
+          "summary": "IF Admin 端口收到的请求（含不存在的路径）没有携带 Authorization 头，或其值不是 `Bearer <admin-token>`（令牌区分大…"
+        },
+        {
+          "id": "19.3",
+          "summary": "WHEN 收到 POST /admin/sandboxes（请求体可含 profile、dataset、anchor_date），THE Admin_API S…"
+        },
+        {
+          "id": "19.4",
+          "summary": "WHEN 收到 POST /admin/sandboxes/{id}/reset 且沙箱不是 frozen，THE Admin_API SHALL 把沙箱数据库…"
+        },
+        {
+          "id": "19.5",
+          "summary": "WHEN 收到 POST /admin/sandboxes/{id}/snapshots，请求体为 {\"name\": <名称>}，且沙箱不是 frozen、该名…"
+        },
+        {
+          "id": "19.6",
+          "summary": "WHEN 收到 POST /admin/sandboxes/{id}/restore，请求体为 {\"name\": <名称>}，且沙箱不是 frozen，THE …"
+        },
+        {
+          "id": "19.7",
+          "summary": "WHEN 收到 GET /admin/sandboxes/{id}/trace（含 frozen 沙箱），THE Admin_API SHALL 返回 HTTP…"
+        },
+        {
+          "id": "19.8",
+          "summary": "WHEN 收到 GET /admin/sandboxes/{id}/diff（含 frozen 沙箱），THE Admin_API SHALL 返回 HTTP …"
+        },
+        {
+          "id": "19.9",
+          "summary": "WHEN 收到 GET /admin/health，THE Admin_API SHALL 返回 HTTP 200 和依次含 framework_version…"
+        },
+        {
+          "id": "19.10",
+          "summary": "WHEN 收到 GET /admin/datasets/{name}/aliases，THE Admin_API SHALL 返回 HTTP 200 和依次含 …"
+        },
+        {
+          "id": "19.11",
+          "summary": "WHEN 收到 GET /admin/sandboxes，THE Admin_API SHALL 返回 HTTP 200 和只含 items 的 JSON 对象…"
+        },
+        {
+          "id": "19.12",
+          "summary": "WHEN 收到 GET /admin/sandboxes/{id}（含 frozen 沙箱），THE Admin_API SHALL 返回 HTTP 200 和…"
+        },
+        {
+          "id": "19.13",
+          "summary": "WHEN 收到 POST /admin/sandboxes/{id}/freeze 或 DELETE /admin/sandboxes/{id}，THE Adm…"
+        },
+        {
+          "id": "19.14",
+          "summary": "WHEN 收到 POST /admin/exports（请求体可含 created_from、created_to），THE Admin_API SHALL 返…"
+        },
+        {
+          "id": "19.15",
+          "summary": "IF 路径中的 sandbox_id 不对应现存沙箱（含已删除的沙箱），路径中的初始数据集名不在实例配置中，restore 的 name 或 diff 的 ba…"
+        },
+        {
+          "id": "19.16",
+          "summary": "IF 对 frozen 沙箱请求 reset、restore 或创建 Named_Snapshot，或新建的 Named_Snapshot 名称已在该沙箱中存在…"
+        },
+        {
+          "id": "19.17",
+          "summary": "IF 请求体非空且不是 JSON 对象、含未定义的键或值类型不符，profile 或 dataset 不在实例配置中（区分大小写），anchor_date 不是…"
+        },
+        {
+          "id": "19.18",
+          "summary": "IF 收到 POST /admin/sandboxes 时非 frozen 沙箱的数量已达到并发上限（需求 15 第 10 条），THEN THE Admin_…"
+        },
+        {
+          "id": "19.19",
+          "summary": "IF POST /admin/sandboxes 所需 Snapshot 的构建失败（如不变量不成立），THEN THE Admin_API SHALL 返回 …"
+        },
+        {
+          "id": "19.20",
+          "summary": "IF snapshots 或 restore 请求体中的 name 缺失、不是匹配 ^[a-z0-9][a-z0-9_-]{0,63}$ 的字符串，或等于保留名…"
+        }
+      ]
+    },
+    {
+      "requirement": 20,
+      "title": "初始数据集构建与快照",
+      "criteria": [
+        {
+          "id": "20.1",
+          "summary": "THE Seed_Builder SHALL 读取由 dataset、version、random_seed、include_shared、current_us…"
+        },
+        {
+          "id": "20.2",
+          "summary": "THE Seed_Builder SHALL 按书写顺序逐条生成 entities 中的单据，一条的全部操作完成后再处理下一条：声明了 source 的经下推生…"
+        },
+        {
+          "id": "20.3",
+          "summary": "THE Seed_Builder SHALL 只从以 random_seed 初始化的伪随机序列为带 gen 的字段和 bulk 记录取得随机值，因此两次构建只…"
+        },
+        {
+          "id": "20.4",
+          "summary": "WHEN 处理 bulk 中的一项，THE Seed_Builder SHALL 新建 count（正整数）条 kind 所指实体的记录：业务包 seed/ 为…"
+        },
+        {
+          "id": "20.5",
+          "summary": "THE Seed_Builder SHALL 以锚点日期和当前用户作为构建时的业务上下文：日期表达式按需求 16 第 5 条以锚点日期求值，context.to…"
+        },
+        {
+          "id": "20.6",
+          "summary": "IF 数据集出现下列任一情况：kind、字段或生成器不存在，生成器参数不合法，写入只读字段或 header_mapping 已映射的表头字段，下推的来源与目标之…"
+        },
+        {
+          "id": "20.7",
+          "summary": "WHEN 生成的字符串值包含框架维护的真实企业名称黑名单中的任一词条，或生成的 name 与同一实体中已有记录的 name 相同，THE Seed_Builde…"
+        },
+        {
+          "id": "20.8",
+          "summary": "THE Seed_Builder SHALL 只用 Shared_Data、生成器和数据集定义产生快照数据，因此修改或删除业务包的示例数据后重新构建，Snaps…"
+        },
+        {
+          "id": "20.9",
+          "summary": "WHEN 数据集的全部记录生成完毕，THE Seed_Builder SHALL 校验 INV-1、INV-2、INV-3、INV-6，任一不成立时构建失败，错…"
+        },
+        {
+          "id": "20.10",
+          "summary": "WHEN 构建成功，THE Seed_Builder SHALL 写出 Snapshot、快照元数据和别名映射文件：元数据含数据集名称与版本、random_se…"
+        },
+        {
+          "id": "20.11",
+          "summary": "THE Seed_Builder SHALL 在 --data-dir 下按（数据集名称与版本，锚点日期）缓存 Snapshot、元数据和别名映射：命中且未按第…"
+        },
+        {
+          "id": "20.12",
+          "summary": "IF 某个键的缓存文件缺失或无法读取，或元数据中的框架版本、元模型版本、业务包版本、random_seed、当前用户或数据集定义摘要（数据集定义文件字节内容的 …"
+        },
+        {
+          "id": "20.13",
+          "summary": "FOR ALL 数据集定义与锚点日期，THE Seed_Builder SHALL 在同一运行环境（同一框架、Python 与 SQLite 版本）的两次构建中…"
+        },
+        {
+          "id": "20.14",
+          "summary": "FOR ALL 同一数据集定义和两个不同的锚点日期，THE Seed_Builder SHALL 在两次构建都成功时产出逐字节一致的别名映射文件。"
+        },
+        {
+          "id": "20.15",
+          "summary": "IF 构建中的任一引擎操作返回错误（如单据引用停用物料时的 R-GEN-006，审核造成负库存时的 R-GEN-007），THEN THE Seed_Build…"
+        },
+        {
+          "id": "20.16",
+          "summary": "THE Seed_Builder SHALL 按以下写法解析数据集记录：ref 字段去掉 _id 后缀书写，值为 `<kind>:<名称>` 形式的别名时取该别…"
+        },
+        {
+          "id": "20.17",
+          "summary": "WHEN 构建初始数据集，THE Seed_Builder SHALL 从计数器均为 0 的空数据库开始依次创建：include_shared 所列各业务包的 …"
+        }
+      ]
+    },
+    {
+      "requirement": 21,
+      "title": "示例业务包 M0 子集与 p2p-demo 实例",
+      "criteria": [
+        {
+          "id": "21.1",
+          "summary": "THE ERP_Mock_MCP SHALL 提供 packs/core、packs/purchase、packs/inventory 三个业务包，目录结构符合…"
+        },
+        {
+          "id": "21.2",
+          "summary": "THE ERP_Mock_MCP SHALL 提供 M0 版 instances/p2p-demo：packs 依次为 core、purchase、invent…"
+        },
+        {
+          "id": "21.3",
+          "summary": "WHEN 客户端经任一 MCP 地址或 stdio 连接 p2p-demo 并请求 tools/list，THE ERP_Mock_MCP SHALL 恰好返回…"
+        },
+        {
+          "id": "21.4",
+          "summary": "THE ERP_Mock_MCP SHALL 在示例业务包中声明 example-p2p.md 第 8 节 core、purchase、inventory 工具…"
+        },
+        {
+          "id": "21.5",
+          "summary": "THE ERP_Mock_MCP SHALL 在 purchase 业务包中配置下推 purchase_requisition_to_order（require…"
+        },
+        {
+          "id": "21.6",
+          "summary": "THE ERP_Mock_MCP SHALL 配置包级规则 R-PUR-001（enforced，bill 为 purchase_order，on 为 crea…"
+        },
+        {
+          "id": "21.7",
+          "summary": "THE ERP_Mock_MCP SHALL 配置两个 on 为 approve 的库存联动：采购入库单为 in 方向，仓库字段为分录 warehouse_id…"
+        },
+        {
+          "id": "21.8",
+          "summary": "THE ERP_Mock_MCP SHALL 提供 purchase-basic 数据集，并为以下记录声明别名：采购单位与基本单位不同且有换算关系的物料，sta…"
+        },
+        {
+          "id": "21.9",
+          "summary": "THE ERP_Mock_MCP SHALL 在每个业务包的 tests/ 中提供包级测试：每条 enforced 规则至少一个通过用例和一个违反用例，每个下推…"
+        },
+        {
+          "id": "21.10",
+          "summary": "THE ERP_Mock_MCP SHALL 在每个业务包目录内提供 README.md，说明业务范围、使用的原语和已知简化（含引言中 M0 已知限制所列的工具…"
+        },
+        {
+          "id": "21.11",
+          "summary": "THE ERP_Mock_MCP SHALL 为第 5 条的两个下推各配置一个反写：on 为 approve，reverse_on 为 unapprove，ta…"
+        },
+        {
+          "id": "21.12",
+          "summary": "FOR ALL 2000-01-01 到 2099-12-31 之间的锚点日期，THE ERP_Mock_MCP SHALL 使 p2p-demo 以该日期为第…"
+        },
+        {
+          "id": "21.13",
+          "summary": "THE ERP_Mock_MCP SHALL 在 purchase 业务包的 exposure.yaml 中声明 purchase_price_query：so…"
+        }
+      ]
+    },
+    {
+      "requirement": 22,
+      "title": "命令行",
+      "criteria": [
+        {
+          "id": "22.1",
+          "summary": "THE CLI SHALL 提供 `erp-mock-mcp serve --instance <目录> [--host] [--port] [--admin-…"
+        },
+        {
+          "id": "22.2",
+          "summary": "THE CLI SHALL 提供 `erp-mock-mcp stdio --instance <目录> [--profile] [--dataset] [--…"
+        },
+        {
+          "id": "22.3",
+          "summary": "WHEN stdio 进程创建沙箱，THE CLI SHALL 在 stderr 输出 sandbox_id 和沙箱目录（位于 --data-dir 下）的绝对…"
+        },
+        {
+          "id": "22.4",
+          "summary": "WHEN 已创建沙箱的 stdio 进程正常退出（stdin 到达文件末尾，或收到 SIGINT、SIGTERM），THE CLI SHALL 先写入 sess…"
+        },
+        {
+          "id": "22.5",
+          "summary": "THE CLI SHALL 提供 `erp-mock-mcp validate --instance <目录> [--packs-dir] [--data-di…"
+        },
+        {
+          "id": "22.6",
+          "summary": "THE CLI SHALL 提供 `erp-mock-mcp seed --instance <目录> [--dataset <名称>] [--anchor-d…"
+        },
+        {
+          "id": "22.7",
+          "summary": "IF serve 或 stdio 启动时 Loader 校验失败，THEN THE CLI SHALL 在 stderr 按需求 2 第 2 条输出错误清单并以…"
+        },
+        {
+          "id": "22.8",
+          "summary": "THE CLI SHALL 使用固定的退出码：成功为 0；加载校验失败或 Snapshot 构建失败为 1；命令行用法错误为 2，包括缺少 --instance…"
+        },
+        {
+          "id": "22.9",
+          "summary": "IF seed 的 --dataset 不在实例配置的 datasets 中（区分大小写），THEN THE CLI SHALL 在 stderr 输出指出该选…"
+        },
+        {
+          "id": "22.10",
+          "summary": "WHEN seed 的全部构建与检查成功，THE CLI SHALL 在 stdout 按 instance.yaml 中 datasets 的顺序为每个所选数…"
+        }
+      ]
+    },
+    {
+      "requirement": 23,
+      "title": "安全与资源限制",
+      "criteria": [
+        {
+          "id": "23.1",
+          "summary": "THE Gateway SHALL 按 Origin 头处理 MCP 端口的 HTTP 请求：不带 Origin 头的请求放行；Origin 的协议为 http…"
+        },
+        {
+          "id": "23.2",
+          "summary": "IF serve 的 --host 不是回环地址（127.0.0.0/8 中的 IPv4 地址、::1 或 localhost）且没有配置 MCP 端点令牌（第…"
+        },
+        {
+          "id": "23.3",
+          "summary": "WHILE serve 启动时环境变量 ERP_MOCK_MCP_TOKEN 的值非空（即配置了 MCP 端点令牌），THE Gateway SHALL 要求 …"
+        },
+        {
+          "id": "23.4",
+          "summary": "WHEN serve 启动时环境变量 ERP_MOCK_ADMIN_TOKEN 的值非空，THE Admin_API SHALL 在该进程运行期间以该值作为需求…"
+        },
+        {
+          "id": "23.5",
+          "summary": "IF serve 启动时 ERP_MOCK_ADMIN_TOKEN 未设置或为空字符串，THEN THE CLI SHALL 在开始监听前用安全随机数生成含至少…"
+        },
+        {
+          "id": "23.6",
+          "summary": "THE ERP_Mock_MCP SHALL 把 Admin 令牌和 MCP 端点令牌的值排除在 stdout、stderr、trace、diff、导出的 zi…"
+        },
+        {
+          "id": "23.7",
+          "summary": "IF MCP 端口或 Admin 端口收到的 HTTP 请求体超过请求体上限（第 9 条，缺省 262144 字节，即 256 KB），THEN THE Gat…"
+        },
+        {
+          "id": "23.8",
+          "summary": "IF tools/call 在需求 12 第 1 条的第一步按第 12 条判定单个沙箱的调用次数、单个沙箱的数据库大小或单个会话的调用速率超限，THEN THE…"
+        },
+        {
+          "id": "23.9",
+          "summary": "THE CLI SHALL 在 serve 和 stdio 启动时各读取一次以下环境变量，未设置或为空字符串时取括号内的缺省值，取值在进程运行期间保持不变：ER…"
+        },
+        {
+          "id": "23.10",
+          "summary": "IF 第 9 条的某个数值环境变量不是不带前导 0 的正整数十进制写法，或 ERP_MOCK_ALLOWED_ORIGINS 的某一项不是协议为 http 或 …"
+        },
+        {
+          "id": "23.11",
+          "summary": "THE Gateway SHALL 对 MCP 端口的 HTTP 请求依次检查 Origin（第 1 条）、MCP 端点令牌（第 3 条）和请求体大小（第 7 …"
+        },
+        {
+          "id": "23.12",
+          "summary": "THE Tool_Layer SHALL 依次检查调用次数、数据库大小和调用速率（工具名未知的调用按需求 14 第 6 条处理，不经过本检查）：调用次数为该沙箱…"
+        }
+      ]
+    },
+    {
+      "requirement": 24,
+      "title": "确定性与工程约束",
+      "criteria": [
+        {
+          "id": "24.1",
+          "summary": "FOR ALL 同一实例配置版本、profile、初始数据集版本、锚点日期和 Request_Sequence（序列中没有调用因调用速率超限被拒绝，见需求 12…"
+        },
+        {
+          "id": "24.2",
+          "summary": "FOR ALL 同上条件，THE Diff_Builder SHALL 使两个沙箱执行完该序列后以 initial 为基准的 diff（经 Admin API …"
+        },
+        {
+          "id": "24.3",
+          "summary": "FOR ALL 同上条件（两个会话都在序列结束后终止，或都未终止），THE Trace_Writer SHALL 使两个沙箱的 trace 事件数相同，且对应事…"
+        },
+        {
+          "id": "24.4",
+          "summary": "WHEN 沙箱经 Admin API 重置后重放同一 Request_Sequence（条件同第 1 条），THE ERP_Mock_MCP SHALL 使每个…"
+        },
+        {
+          "id": "24.5",
+          "summary": "THE ERP_Mock_MCP SHALL 只由业务包配置、沙箱数据库内容、锚点日期和请求参数计算工具结果，运行期不调用任何 LLM，也不向回环地址以外的主机…"
+        },
+        {
+          "id": "24.6",
+          "summary": "THE ERP_Mock_MCP SHALL 只从显式传入的随机种子（数据集的 random_seed）获得数据的随机性，并用操作系统提供的安全随机数生成沙箱 …"
+        },
+        {
+          "id": "24.7",
+          "summary": "THE ERP_Mock_MCP SHALL 只在 gateway 与 cli 包中读取系统时间（含当前日期、当前时刻和单调时钟，Clock 所用的当前时刻由二…"
+        },
+        {
+          "id": "24.8",
+          "summary": "THE ERP_Mock_MCP SHALL 使 src/erp_mock/ 的运行期导入只沿 gateway → tools → domain → state…"
+        },
+        {
+          "id": "24.9",
+          "summary": "FOR ALL 以不同 PYTHONHASHSEED 取值启动的两个进程，THE ERP_Mock_MCP SHALL 使第 1 到 3 条所比较的工具结果、d…"
+        },
+        {
+          "id": "24.10",
+          "summary": "FOR ALL 在同一服务进程中与某个沙箱并发执行请求的其他沙箱，THE ERP_Mock_MCP SHALL 使该沙箱按第 1 到 3 条比较的工具结果、di…"
+        },
+        {
+          "id": "24.11",
+          "summary": "WHEN 沙箱恢复某个 Named_Snapshot 后重放创建该快照之后首次执行的同一 Request_Sequence（条件同第 1 条），THE ERP_…"
+        }
+      ]
+    },
+    {
+      "requirement": 25,
+      "title": "测试与 M0 退出标准",
+      "criteria": [
+        {
+          "id": "25.1",
+          "summary": "THE ERP_Mock_MCP SHALL 在 tests/unit/ 中为每个 M0 原语（crud、numbering、pricing、unit_conv…"
+        },
+        {
+          "id": "25.2",
+          "summary": "THE ERP_Mock_MCP SHALL 在 tests/property/ 中提供属性测试：分别以 p2p-demo 的 purchase-basic 数…"
+        },
+        {
+          "id": "25.3",
+          "summary": "THE ERP_Mock_MCP SHALL 在 tests/contract/ 中保存 p2p-demo 的 semantic profile 的 tools…"
+        },
+        {
+          "id": "25.4",
+          "summary": "THE ERP_Mock_MCP SHALL 提供确定性测试，覆盖需求 24 第 1 到 4 条和第 9 到 11 条（第 1 到 3 条至少包括两个沙箱分别经…"
+        },
+        {
+          "id": "25.5",
+          "summary": "THE ERP_Mock_MCP SHALL 提供协议集成测试：官方 MCP Python SDK 客户端分别经 Streamable HTTP（/mcp）和 …"
+        },
+        {
+          "id": "25.6",
+          "summary": "THE ERP_Mock_MCP SHALL 提供 Admin API 测试：需求 19 第 1 条的 13 个接口（预建、列出、元数据、重置、快照、恢复、冻结…"
+        },
+        {
+          "id": "25.7",
+          "summary": "THE ERP_Mock_MCP SHALL 通过 ruff format --check、ruff check 和 mypy（src/erp_mock/dom…"
+        },
+        {
+          "id": "25.8",
+          "summary": "THE ERP_Mock_MCP SHALL 用 uv 管理依赖：pyproject.toml 的 requires-python 为 >=3.12,<3.13…"
+        },
+        {
+          "id": "25.9",
+          "summary": "THE ERP_Mock_MCP SHALL 为需求 1 到 24 的每条验收标准提供至少一个以需求号与条目号（如 23.7）标记的自动化测试，第 7 条的命令…"
+        },
+        {
+          "id": "25.10",
+          "summary": "WHEN 在只执行过 uv sync --locked 的全新检出中、以任意系统日期运行第 7 条的命令，THE ERP_Mock_MCP SHALL 使该命令…"
+        },
+        {
+          "id": "25.11",
+          "summary": "THE ERP_Mock_MCP SHALL 提供一条性能测量命令，在 p2p-demo 上测量并输出 engineering.md 第 6 节前三项指标的实测…"
+        }
+      ]
+    }
+  ]
+}

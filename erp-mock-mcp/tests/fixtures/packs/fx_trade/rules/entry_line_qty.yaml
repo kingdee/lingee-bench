@@ -1,0 +1,12 @@
+# enforced 规则：引用 line 的 check 按行求值，结果为假的分录按行号进入 details，字段路径为
+# lines[i].entry_qty（需求 10 第 7 条）。on 含 create，所以下推生成的收料单草稿同样适用
+# （需求 10 第 9 条）；approve、unapprove 与 delete 不在 on 中，不求值。
+rule:
+  id: R-FXT-003
+  bill: goods_entry
+  enforcement: enforced
+  on: [create, update, submit]
+  check: "line.entry_qty <= 1000"
+  error_code: BUSINESS_RULE_VIOLATION
+  field: entry_qty
+  message: { zh: 单行收料数量不得超过 1000, en: The received quantity of one line must not exceed 1000 }

@@ -1,0 +1,19 @@
+# 审核时按 transfer 方向调出仓减少、调入仓增加的单据；R-FXT-001 要求两仓不同。
+bill: stock_move
+label: { zh: 移库单, en: Stock move }
+id_prefix: mv
+number: { prefix: MVT }
+state_machine: standard
+operations: [search, get, create, update, delete, submit, unsubmit, approve, unapprove]
+header:
+  from_depot_id: { type: ref, ref: depot, label: { zh: 调出仓库, en: From depot }, required: true }
+  to_depot_id:   { type: ref, ref: depot, label: { zh: 调入仓库, en: To depot }, required: true }
+lines:
+  article_id: { type: ref, ref: article, label: { zh: 存货, en: Article }, required: true }
+  measure_id: { type: ref, ref: measure, label: { zh: 计量单位, en: Measure }, default_from: article.base_measure_id }
+  move_qty:   { type: qty, label: { zh: 移库数量, en: Moved quantity }, required: true }
+line_quantity: { material_field: article_id, unit_field: measure_id, qty_field: move_qty }
+search:
+  keyword_fields: [number]
+  filters: [status, biz_date]
+  default_sort: [biz_date desc, number desc]

@@ -1,0 +1,56 @@
+# Office（文档处理）冒烟：四个必选 harness × GLM-5.2 × lg-bench-general-v1.0 的 1 道题。
+# 题目：DRV-compliance-redline-scan-L1（合规红线扫描，docx 输入，产物登记在 result.json）。
+# 评分：任务自带规则层 + LLM Judge；未配置 Judge 凭据时按任务现有逻辑退化为仅规则评分。
+# 凭据：--env-file 提供 LG_ANTHROPIC_* / LG_OPENAI_*，只进入每个 trial 的模型代理 sidecar。
+# 用法：uv run harbor run --config configs/jobs/office-smoke-glm-5.2.yaml --env-file .env.glm
+jobs_dir: jobs
+n_attempts: 1
+n_concurrent_trials: 2
+retry:
+  max_retries: 0
+environment:
+  type: docker
+  extra_docker_compose:
+    - configs/compose/model-proxy.yaml
+    - configs/compose/general-isolation.yaml
+    # claude-code 只读挂载镜像（lg-bench harness build claude-code）
+    - configs/compose/harness/claude-code.yaml
+    # opencode 只读挂载镜像（lg-bench harness build opencode）
+    - configs/compose/harness/opencode.yaml
+    - configs/compose/harness/deepseek-harness.yaml
+    - configs/compose/harness/pi.yaml
+agents:
+  - import_path: lg_bench.agents.claude_code:LgClaudeCode
+    model_name: glm-5.2
+    override_timeout_sec: 900
+    override_setup_timeout_sec: 1800
+    kwargs:
+      # 只用预构建镜像安装；未构建时直接报错（不回退在线安装）
+      install_mode: image
+      version: "2.1.187"
+      max_turns: 30
+      max_budget_usd: "2.00"
+  - import_path: lg_bench.agents.pi:LgPi
+    model_name: glm-5.2
+    override_timeout_sec: 900
+    override_setup_timeout_sec: 1800
+    kwargs:
+      install_mode: image
+      version: "1.1.0"
+  - import_path: lg_bench.agents.deepseek_harness:DeepSeekHarness
+    model_name: glm-5.2
+    override_timeout_sec: 900
+    override_setup_timeout_sec: 1800
+    kwargs:
+      install_mode: image
+      version: "0.2.0-rc.2"
+  - import_path: lg_bench.agents.opencode:LgOpenCode
+    model_name: glm-5.2
+    override_timeout_sec: 900
+    override_setup_timeout_sec: 1800
+    kwargs:
+      # 只用预构建镜像安装；未构建时直接报错（不回退在线安装）
+      install_mode: image
+      version: "1.19.0"
+tasks:
+  - path: datasets/lg-bench-general-v1.0/tasks/DRV-compliance-redline-scan-L1

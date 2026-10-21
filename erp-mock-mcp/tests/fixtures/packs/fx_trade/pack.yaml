@@ -1,0 +1,17 @@
+# 引擎测试夹具的单据包，依赖 fx_base 的基础资料。单据名与示例业务包全部不同。
+# 覆盖两种状态机、pricing 与只声明数量语义的分录、limit_by 为 qty 与 amount 的下推与反写、
+# in/out/transfer/adjust 四种库存联动、enforced 与 described 规则、声明式查询与原语查询。
+pack: fx_trade
+version: 1.0.0
+title: { zh: 夹具业务单据, en: Fixture transactions }
+requires_meta_model: ">=0.1.0 <1.0.0"
+depends_on:
+  fx_base: ">=1.0.0 <2.0.0"
+primitives: [crud, numbering, pricing, unit_conversion, state_machine, conversion, writeback, inventory, rule_expr]
+rule_prefix: FXT
+id_prefixes: [so, ge, fn, ps, mv, cs, isu]
+number_prefixes: [SPO, GRN, FEE, PAY, MVT, CNT, ISS]
+tool_prefixes: [supply_, goods_, fee_, pay_, stock_, count_, issue_]
+description_variants: [zh-detailed]
+license: Apache-2.0
+maintainers: ["ERP-Mock-MCP 维护者"]

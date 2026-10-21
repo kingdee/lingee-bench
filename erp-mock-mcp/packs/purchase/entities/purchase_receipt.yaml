@@ -1,0 +1,42 @@
+# 采购入库单：采购主线的最后一张单据（example-p2p.md 第 4 节）。只能由采购订单下推生成
+# （来源为"采购订单（必须）"），所以 operations 里没有 create，也没有 update——下推生成的草稿
+# 不允许整体替换分录（需求 5 第 4 条），只有表头可改，而本单据的表头除标准字段外只有供应商，
+# 它由 header_mapping 带入，没有需要模型改写的内容。
+#
+# pricing 为 true：分录的字段与采购订单分录对称（example-p2p.md 第 10 节），单价与税率由
+# line_mapping 从订单行带入，数量与入库仓库由调用方逐行输入。
+#
+# warehouse_id 在分录上，不在表头：一张订单的一行可以分几个仓库入库（需求 8 第 7 条），
+# 库存联动的仓库字段也因此声明为 line.warehouse_id（需求 21 第 7 条）。
+# 它是必填的 ref 字段，这是 inventory 联动对仓库字段的要求（需求 9 第 11 条）。
+#
+# operations 是 example-p2p.md 第 8 节为采购入库单列出的 7 个工具（含下推工具）所对应的操作
+# （需求 21 第 4 条）。M0 工具清单只保留下推工具、submit 与 approve；search、get、delete 的
+# 缺失是引言中列出的已知限制，unapprove 同样不暴露（见 README.md）。
+bill: purchase_receipt
+label: { zh: 采购入库单, en: Purchase receipt }
+id_prefix: prcv
+number: { prefix: CGRK }
+state_machine: standard
+pricing: true
+partner: { field: supplier_id }
+operations: [search, get, delete, submit, approve, unapprove]
+header:
+  supplier_id: { type: ref, ref: supplier, label: { zh: 供应商, en: Supplier }, required: true }
+lines:
+  material_id: { type: ref, ref: material, label: { zh: 物料, en: Material }, required: true }
+  unit_id:
+    type: ref
+    ref: unit
+    label: { zh: 计量单位, en: Unit }
+    default_from: material.purchase_unit_id
+  warehouse_id:
+    type: ref
+    ref: warehouse
+    label: { zh: 入库仓库, en: Warehouse }
+    required: true
+line_quantity: { material_field: material_id, unit_field: unit_id }
+search:
+  keyword_fields: [number]
+  filters: [status, supplier_id, biz_date]
+  default_sort: [biz_date desc, number desc]

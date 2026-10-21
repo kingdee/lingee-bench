@@ -1,0 +1,56 @@
+# 物料：业务数据（shared 为 false），编码由引擎按 code 声明生成（M00001、M00002……）。
+# has_status 为 true，停用的物料不得写入新单据（R-GEN-006）。
+#
+# unit_conversion 声明基本单位字段与换算关系实体（需求 6 第 8 条）：库存按基本单位记账，
+# 引擎据此把单据分录的 qty 折算成 qty_base。base_unit_id 必须是必填的 ref 字段
+# （需求 6 第 12 条）；purchase_unit_id 缺省取基本单位，采购单据分录的计量单位缺省取它。
+#
+# base_unit_id 的 default 写成内部 ID unit_000001，即本包共享数据中第一条计量单位（PCS）：
+# 数据集用 bulk 批量生成背景物料时，没有绑定生成器的字段只能取缺省值（需求 20 第 4 条），
+# 而基本单位既无法由生成器填写也不能为空。写定内部 ID 是本包的已知简化，见 README.md。
+#
+# operations 生成 material_search 与 material_get，二者都在 M0 工具清单中。
+entity: material
+label: { zh: 物料, en: Material }
+id_prefix: mat
+code: { prefix: M, digits: 5 }
+has_status: true
+operations: [search, get]
+search:
+  keyword_fields: [code, name, spec]
+  filters: [kind, status]
+  default_sort: [code]
+unit_conversion:
+  base_unit_field: base_unit_id
+  entity: unit_conversion
+  material_field: material_id
+  unit_field: from_unit_id
+  factor_field: factor
+fields:
+  name: { type: string, label: { zh: 名称, en: Name }, required: true }
+  spec: { type: string, label: { zh: 规格型号, en: Specification } }
+  kind:
+    type: enum
+    label: { zh: 物料类型, en: Material kind }
+    required: true
+    values:
+      raw:      { zh: 原材料, en: Raw material }
+      finished: { zh: 产成品, en: Finished goods }
+      goods:    { zh: 商品, en: Goods }
+  base_unit_id:
+    type: ref
+    ref: unit
+    label: { zh: 基本单位, en: Base unit }
+    required: true
+    default: unit_000001
+  purchase_unit_id:
+    type: ref
+    ref: unit
+    label: { zh: 采购单位, en: Purchase unit }
+    default_from: base_unit.id
+  tax_rate:
+    type: rate
+    label: { zh: 税率, en: Tax rate }
+    values: ["0", "0.06", "0.09", "0.13"]
+    default: "0.13"
+  standard_cost: { type: money, label: { zh: 标准成本, en: Standard cost } }

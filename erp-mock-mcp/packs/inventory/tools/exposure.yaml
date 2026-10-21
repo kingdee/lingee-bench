@@ -1,0 +1,16 @@
+# 工具暴露（tool-design.md 第 2 节）：本包按 operations 与 queries 生成 4 个工具
+#   stock_adjustment_create、stock_adjustment_submit、stock_adjustment_approve、
+#   inventory_balance_query
+# （单据的操作按 operations 顺序在前，查询工具按本文件的书写顺序在后，需求 11 第 9 条）。
+#
+# stock_adjustment_submit 与 stock_adjustment_approve 不在 example-p2p.md 第 9 节的 M0 工具
+# 清单中，用 exclude 去掉（需求 21 第 4 条）；两个操作仍在配置里，初始数据集与包级测试用例可以
+# 用 `status: approved` 让 Seed_Builder 执行它们，从而触发审核时的库存联动。
+#
+# queries 里的 inventory_balance_query 是原语查询：参数（material_id、warehouse_id 与两个分页
+# 参数）与结果（物料、仓库、基本单位引用和以基本单位计的即时库存）都由 inventory 原语提供
+# （需求 9 第 7、12 条），业务包只声明工具名。没有 rename，也没有声明式查询。
+pack: inventory
+exclude: [stock_adjustment_submit, stock_adjustment_approve]
+queries:
+  - { tool: inventory_balance_query, primitive: inventory, query: balance }

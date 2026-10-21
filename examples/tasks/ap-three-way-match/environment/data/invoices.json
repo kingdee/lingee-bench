@@ -1,0 +1,11 @@
+[
+  {"invoice_id":"I001","invoice_number":"INV01","supplier_id":"S01","po_id":"PO001","quantity":10,"unit_price_cents":5000},
+  {"invoice_id":"I002","invoice_number":"INV02","supplier_id":"S02","po_id":"PO002","quantity":10,"unit_price_cents":2000},
+  {"invoice_id":"I003","invoice_number":"INV03","supplier_id":"S03","po_id":"PO003","quantity":2,"unit_price_cents":11000},
+  {"invoice_id":"I004","invoice_number":"INV04","supplier_id":"S04","po_id":"PO404","quantity":1,"unit_price_cents":10000},
+  {"invoice_id":"I005","invoice_number":"INV05","supplier_id":"S04","po_id":"PO004","quantity":1,"unit_price_cents":30000},
+  {"invoice_id":"I006","invoice_number":"INV01","supplier_id":"S01","po_id":"PO001","quantity":10,"unit_price_cents":5000},
+  {"invoice_id":"I007","invoice_number":"INV07","supplier_id":"S05","po_id":"PO005","quantity":12,"unit_price_cents":100000},
+  {"invoice_id":"I008","invoice_number":"INV08","supplier_id":"S06","po_id":"PO006","quantity":10,"unit_price_cents":100000},
+  {"invoice_id":"I009","invoice_number":"INV09","supplier_id":"S99","po_id":"PO007","quantity":1,"unit_price_cents":5000}
+]

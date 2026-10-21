@@ -1,0 +1,47 @@
+name: Check release
+on: [push, pull_request]
+permissions:
+  contents: read
+env:
+  UV_PYTHON: '3.12'
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      # 题集从 Hugging Face 下载（datasets/README.md），CI 不下载：这里只跑不依赖题集的检查，
+      # 依赖题集的测试会显示为 skipped。下载后在本地执行 check_release.py --datasets 与完整 pytest。
+      - run: uv run python scripts/check_release.py
+      - run: uv run lg-bench validate
+      - run: uv run pytest -q -rs
+      - run: uv run lg-bench smoke
+      - run: uv run lg-bench preflight --dry-run --skip-local-images
+  mock:
+    name: mock (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: core
+            pytest-args: --ignore=tests/property
+          - group: properties
+            pytest-args: tests/property --ignore=tests/property/test_p17_invariants.py
+          - group: invariants-purchase
+            pytest-args: tests/property/test_p17_invariants.py -k purchase-basic
+          - group: invariants-fixture
+            pytest-args: tests/property/test_p17_invariants.py -k fx-basic
+    env:
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --directory erp-mock-mcp --locked
+      - run: uv run --directory erp-mock-mcp pytest -vv --durations=20 ${{ matrix.pytest-args }}

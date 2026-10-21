@@ -1,0 +1,19 @@
+# 仓库：共享基础数据，编码由引擎按 code 声明生成（WH01、WH02……）。即时库存按
+# （物料，仓库）结存，仓库字段由各库存联动自己声明（需求 9 第 1、11 条）。
+# has_status 为 true，停用的仓库不得写入新单据（R-GEN-006）。
+#
+# operations 只生成 warehouse_search，这也是 M0 工具清单中唯一的仓库工具：仓库的全部字段
+# 就是检索结果里的那四项，没有需要单独 get 的内容。
+entity: warehouse
+label: { zh: 仓库, en: Warehouse }
+id_prefix: wh
+code: { prefix: WH, digits: 2 }
+shared: true
+has_status: true
+operations: [search]
+search:
+  keyword_fields: [code, name]
+  filters: [status]
+  default_sort: [code]
+fields:
+  name: { type: string, label: { zh: 名称, en: Name }, required: true }

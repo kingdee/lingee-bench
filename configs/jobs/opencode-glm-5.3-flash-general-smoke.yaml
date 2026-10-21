@@ -1,0 +1,34 @@
+# OpenCode + GLM-5.3-flash: one general task, accessed directly from the dataset.
+# Docker internal networking isolates main; only the fixed-model proxy has egress.
+# Run: uv run harbor run --config configs/jobs/opencode-glm-5.3-flash-general-smoke.yaml --env-file .env.glm
+jobs_dir: jobs
+n_attempts: 1
+n_concurrent_trials: 1
+environment_build_timeout_multiplier: 3
+retry:
+  max_retries: 0
+environment:
+  type: docker
+  extra_docker_compose:
+    - configs/compose/model-proxy.yaml
+    - configs/compose/general-isolation.yaml
+    - configs/compose/model-glm-5.3-flash.yaml
+    - configs/compose/harness/opencode.yaml
+verifier:
+  env:
+    JUDGE_BASE_URL: http://lg-model-proxy:18080/openai
+    JUDGE_API_KEY: lg-proxy-placeholder
+    JUDGE_MODEL: glm-5.3-flash
+    JUDGE_STRICT: "1"
+agents:
+  - import_path: lg_bench.agents.opencode:LgOpenCode
+    model_name: glm-5.3-flash
+    override_timeout_sec: 900
+    override_setup_timeout_sec: 1800
+    kwargs:
+      install_mode: image
+      version: "1.19.0"
+tasks:
+  - path: datasets/lg-bench-general-v1.0/tasks/SCH-meeting-date-policy-check-L1
+artifacts:
+  - /workspace/output

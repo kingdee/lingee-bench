@@ -1,0 +1,17 @@
+# 往来单位：has_status 为 true，停用后不得用于新单据（R-GEN-006，需求 5 第 7 条）。
+entity: vendor
+label: { zh: 往来单位, en: Vendor }
+id_prefix: ven
+code: { prefix: V, digits: 4 }
+has_status: true
+operations: [search, get]
+search:
+  keyword_fields: [code, name, short_name]
+  filters: [status]
+  default_sort: [code]
+fields:
+  name:             { type: string, label: { zh: 名称, en: Name }, required: true }
+  short_name:       { type: string, label: { zh: 简称, en: Short name } }
+  contact:          { type: string, label: { zh: 联系人, en: Contact } }
+  pay_days:         { type: int, label: { zh: 账期天数, en: Payment term days }, default: 30 }
+  default_tax_rate: { type: rate, label: { zh: 缺省税率, en: Default tax rate }, default: "0.13" }

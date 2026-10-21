@@ -1,0 +1,110 @@
+# 包级测试用例：联动 stock_adjustment_inventory（adjust 方向）的回放用例（需求 21 第 9 条）。
+#
+# M0 不暴露库存调整单的提交与审核工具，所以审核放在 setup 里：带 `status: approved` 的调整单由
+# Seed_Builder 依次执行 create、submit、approve，审核时按表头的 reason 走 adjust 联动
+# （需求 20 第 2 条）。setup 建两张单据，分别覆盖增减两个方向：
+#   盘盈 10 个换算单位，按 1 换算单位折 12 个基本单位计 +120；
+#   盘亏 20 个基本单位计 -20。
+# 于是（用例物料，第一个仓库）的即时库存为 100 个基本单位，由第 1 步的查询核对。
+#
+# 第 2 步用 stock_adjustment_create 建一张盘盈草稿，第 3、4 步核对它没有改变任何即时库存：草稿
+# 只写表头与分录，库存要等审核（需求 9 第 1 条）。分录不写 unit_id，所以计量单位取物料的基本
+# 单位（entities/stock_adjustment.yaml 的 default_from），qty_base 与 qty 相等。
+#
+# 每一步之后执行器都检查 INV-1、INV-2、INV-3、INV-6，所以联动没写流水、流水与即时库存不符、
+# 草稿误改库存都会在相应步骤报出。
+#
+# 内部 ID：计数器从 0 开始、共享数据先建，所以 core 共享数据的计量单位依次为 unit_000001
+# （基本单位）、unit_000002（换算单位），仓库依次为 wh_000001 到 wh_000003（第三个已停用）；
+# setup 里的物料是本数据集第一条业务数据，内部 ID 为 mat_000001、编码为 M00001
+# （需求 20 第 17 条）。计量单位与仓库在 setup 中按编码引用。
+#
+# 日期的写法不同：setup 里写相对锚点日期的表达式（month(0).day(1)），步骤的参数只接受
+# YYYY-MM-DD 的真实日期，不填时取当前业务日期，即锚点日期（需求 16 第 2 条）。
+#
+# setup 里的名称都带"用例专用"：执行器会把它们与本实例全部描述比对（需求 3 第 5 条）。
+case: stock-adjustment-adjust
+anchor_date: 2026-10-09
+setup:
+  material:counted:
+    kind: material
+    name: 用例专用盘点物料
+    spec: 用例规格 D20
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: BOX
+    tax_rate: "0.13"
+    standard_cost: "4.50"
+  unit_conversion:counted:
+    kind: unit_conversion
+    material: "material:counted"
+    from_unit: BOX
+    factor: "12"
+  stock_adjustment:gain:
+    kind: stock_adjustment
+    warehouse: WH01
+    reason: gain
+    biz_date: month(0).day(1)
+    status: approved
+    lines:
+      - { material: "material:counted", unit: BOX, qty: "10" }
+  stock_adjustment:loss:
+    kind: stock_adjustment
+    warehouse: WH01
+    reason: loss
+    biz_date: month(0).day(2)
+    status: approved
+    lines:
+      - { material: "material:counted", unit: PCS, qty: "20" }
+steps:
+  # 盘盈 120、盘亏 20，余 100；数量以基本单位计，查询也返回物料的基本单位引用。
+  - call: inventory_balance_query
+    args: { material_id: "$material:counted" }
+    expect:
+      result:
+        total: 1
+        page: 1
+        page_size: 20
+        has_more: false
+        items:
+          - material: { id: mat_000001, code: M00001 }
+            warehouse: { id: wh_000001, code: WH01 }
+            base_unit: { id: unit_000001, code: PCS }
+            qty_base: "100"
+  # 另一个仓库的盘盈草稿：不写 unit_id，计量单位取物料的基本单位，qty_base 等于 qty。
+  - call: stock_adjustment_create
+    args:
+      warehouse_id: wh_000002
+      reason: gain
+      lines:
+        - { material_id: "$material:counted", qty: "5" }
+    alias: stock_adjustment:drafted
+    expect:
+      is_error: false
+      result:
+        status: draft
+        reason: gain
+        warehouse: { id: wh_000002, code: WH02 }
+        lines:
+          - line_no: 1
+            material: { id: mat_000001, code: M00001 }
+            unit: { id: unit_000001, code: PCS }
+            qty: "5"
+            qty_base: "5"
+  # 草稿不写库存流水，所以第二个仓库还没有即时库存记录。
+  - call: inventory_balance_query
+    args: { warehouse_id: wh_000002 }
+    expect:
+      result:
+        total: 0
+        has_more: false
+        items: []
+  # 不带筛选：全库仍只有 setup 审核出来的那一条记录。
+  - call: inventory_balance_query
+    args: {}
+    expect:
+      result:
+        total: 1
+        items:
+          - warehouse: { id: wh_000001, code: WH01 }
+            qty_base: "100"

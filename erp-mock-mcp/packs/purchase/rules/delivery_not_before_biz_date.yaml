@@ -1,0 +1,23 @@
+# 包级规则 R-PUR-001（需求 21 第 6 条）：交货日期不得早于业务日期。
+# enforced，bill 为 purchase_order，on 为 create、update、submit，check 为
+# header.delivery_date >= header.biz_date，error_code 为 VALIDATION_FAILED，field 为
+# delivery_date。这是 meta-model.md 第 9 节的包级规则示例。
+#
+# on 中的 create 同时适用于直接新建和由 purchase_requisition_to_order 下推生成
+# （需求 10 第 9 条）；approve、close 等操作不在 on 中，不求值，所以审核时不会因为业务日期
+# 本身没变而突然报错。反写与自动关闭对订单的改动不算对订单的操作，同样不触发本规则。
+#
+# check 不引用 line，所以只求值一次，details 恰好一项，字段路径取 field（需求 10 第 7 条）；
+# 两个日期任一为空时结果为未知，按满足处理（需求 10 第 6 条），这正是下推没有带入交货日期时
+# 不被拦住的原因。错误 message 取下面 message.zh 的原文（需求 13 第 7 条）。
+rule:
+  id: R-PUR-001
+  bill: purchase_order
+  enforcement: enforced
+  on: [create, update, submit]
+  check: "header.delivery_date >= header.biz_date"
+  error_code: VALIDATION_FAILED
+  field: delivery_date
+  message:
+    zh: 交货日期不得早于业务日期
+    en: Delivery date must not be earlier than the business date

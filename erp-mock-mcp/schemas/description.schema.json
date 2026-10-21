@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "description.schema.json",
+  "$defs": {
+    "ToolDescription": {
+      "additionalProperties": false,
+      "description": "The description of one tool and of its parameters, as written for one variant.\n\nBoth go into tools/list verbatim (requirement 3.7). An empty or missing text is\naccepted here and reported at step 7 with the variant, the tool and the parameter path\n(requirement 3.2).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": false,
+          "default": {},
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*(?:\\[\\]\\.[a-z][a-z0-9_]*)?$": {
+              "type": "string"
+            }
+          },
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "title": "ToolDescription",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``tools/descriptions/<variant>.yaml``: the descriptions of one variant.\n\n``variant`` is text here, so step 7 reports an unknown variant name together with the\nother description errors (requirement 3.1); :data:`DESCRIPTION_VARIANTS` lists the\nknown names.",
+  "properties": {
+    "variant": {
+      "minLength": 1,
+      "title": "Variant",
+      "type": "string"
+    },
+    "tools": {
+      "additionalProperties": false,
+      "default": {},
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "$ref": "#/$defs/ToolDescription"
+        }
+      },
+      "title": "Tools",
+      "type": "object"
+    }
+  },
+  "required": [
+    "variant"
+  ],
+  "title": "DescriptionFile",
+  "type": "object"
+}

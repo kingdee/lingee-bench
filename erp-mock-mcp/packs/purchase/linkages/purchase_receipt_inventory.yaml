@@ -1,0 +1,18 @@
+# 采购入库单的库存联动（需求 21 第 7 条）：on 为 approve，direction 为 in，仓库字段为分录的
+# warehouse_id，数量字段为分录的 qty_base。这是 meta-model.md 第 8 节的联动示例。
+#
+# 审核时每个分录写一条库存流水，qty_delta 为 +qty_base，并计入（物料，入库仓库）的即时库存
+# （需求 9 第 1、2 条）；物料取分录数量语义中物料引用字段的值，即 line.material_id。
+# 反审核时删除本次审核写入的全部流水并相应减少即时库存（需求 9 第 6 条），减到负数时返回
+# R-GEN-007 并整体回滚。
+#
+# qty_field 必须是 line.qty_base（需求 9 第 11 条）：库存一律按基本单位记账，采购单据的分录
+# 用的是采购单位，换算由 unit_conversion 原语按物料的换算关系完成（需求 6 第 6 条）。
+linkage:
+  id: purchase_receipt_inventory
+  bill: purchase_receipt
+  primitive: inventory
+  on: approve
+  direction: in
+  warehouse_field: line.warehouse_id
+  qty_field: line.qty_base

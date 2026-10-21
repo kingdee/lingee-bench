@@ -1,0 +1,24 @@
+# 不启用 pricing、只声明数量语义的单据：引擎为分录添加只读 qty_base（需求 1 第 4 条）。
+# 它是供货订单按数量下推的目标，审核时按 in 方向增加库存。
+# entry_ref 是单据上的 unique 字段，用来覆盖"同时违反业务规则与唯一性"的情形：业务规则步骤
+# 在唯一性之前，所以只报业务规则的错误（需求 12 第 11 条）。
+bill: goods_entry
+label: { zh: 收料单, en: Goods entry }
+id_prefix: ge
+number: { prefix: GRN }
+state_machine: standard
+partner: { field: vendor_id }
+operations: [search, get, create, update, delete, submit, unsubmit, approve, unapprove, close, unclose]
+header:
+  vendor_id: { type: ref, ref: vendor, label: { zh: 往来单位, en: Vendor }, required: true }
+  entry_ref: { type: string, label: { zh: 来料单号, en: Delivery reference }, unique: true }
+lines:
+  article_id: { type: ref, ref: article, label: { zh: 存货, en: Article }, required: true }
+  measure_id: { type: ref, ref: measure, label: { zh: 计量单位, en: Measure }, default_from: article.base_measure_id }
+  depot_id:   { type: ref, ref: depot, label: { zh: 收料仓库, en: Depot }, required: true }
+  entry_qty:  { type: qty, label: { zh: 收料数量, en: Received quantity }, required: true }
+line_quantity: { material_field: article_id, unit_field: measure_id, qty_field: entry_qty }
+search:
+  keyword_fields: [number]
+  filters: [status, vendor_id, biz_date]
+  default_sort: [biz_date desc, number desc]

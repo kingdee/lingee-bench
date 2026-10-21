@@ -1,0 +1,6 @@
+# 操作员：第一条的内部 ID 为 opr_000001，即 instance.yaml 与数据集的 current_user，
+# 所以 context.user 与 default_context 的 user 都取它（需求 20 第 5 条）。
+# 第二条是库管员，数据集按编码把它写进发料单的领用人字段。
+records:
+  - { kind: operator, code: OP01, name: 夹具采购员, branch: BR01, duty: buyer }
+  - { kind: operator, code: OP02, name: 夹具库管员, branch: BR01, duty: keeper }

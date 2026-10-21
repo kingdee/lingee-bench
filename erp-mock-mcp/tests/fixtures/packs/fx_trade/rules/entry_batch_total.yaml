@@ -1,0 +1,11 @@
+# enforced 规则：不引用 line 的 check 只求值一次，规则没有声明 field，所以 details 为空数组
+# （需求 10 第 7 条）。编号大于同一单据的 R-FXT-003，但本文件的路径在前，用来证明包级规则
+# 按编号码点序检查而不是按模型顺序（需求 10 第 8 条）。
+rule:
+  id: R-FXT-004
+  bill: goods_entry
+  enforcement: enforced
+  on: [create, update, submit]
+  check: "sum(lines.entry_qty) <= 2000"
+  error_code: VALIDATION_FAILED
+  message: { zh: 一张收料单的收料数量合计不得超过 2000, en: The received quantity of one goods entry must not exceed 2000 in total }

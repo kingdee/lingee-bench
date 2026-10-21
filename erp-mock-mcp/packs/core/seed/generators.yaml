@@ -1,0 +1,18 @@
+# 实体生成器（设计文档数据模型 1）：键为 `<实体>.<字段>`，值为内置生成器及其参数。
+# 初始数据集用 bulk 批量生成背景记录时，绑定了生成器的字段取生成值，其余字段取缺省值
+# （需求 20 第 4 条）；数据集里写死的值不随随机种子变化。
+#
+# 只为两个业务数据实体绑定：supplier 与 material 的全部可写字段都在这里，所以 bulk 能把
+# 它们批量生成出来（物料的基本单位取 entities/material.yaml 里的缺省值）。
+# 共享基础数据（org、department、employee、unit、warehouse）由 seed/shared/ 写定，
+# 不需要生成器；unit_conversion 的系数随物料在数据集中显式声明。
+generators:
+  supplier.name: { gen: company_name, industry: 机械 }
+  supplier.short_name: { gen: short_name }
+  supplier.payment_term_days: { gen: int_range, min: 15, max: 90 }
+  supplier.default_tax_rate: { gen: choice, values: ["0", "0.06", "0.09", "0.13"] }
+  material.name: { gen: code_words, words: [冷轧板, 导向轴, 联轴器, 滚针轴承, 密封圈, 齿形带] }
+  material.spec: { gen: code_words, words: [D12, D20, L150, L320, T2P5, T4P0] }
+  material.kind: { gen: choice, values: [raw, finished, goods] }
+  material.tax_rate: { gen: choice, values: ["0.09", "0.13"] }
+  material.standard_cost: { gen: decimal_range, min: "1.20", max: "860.00" }

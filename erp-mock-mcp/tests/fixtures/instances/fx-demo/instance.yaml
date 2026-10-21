@@ -1,0 +1,16 @@
+# 引擎测试夹具的实例配置：固定时钟，使结果可以逐字节复现（需求 16 第 1、3 条）。
+instance: fx-demo
+version: 1.0.0
+title: { zh: 引擎夹具实例, en: Engine fixture instance }
+packs:
+  fx_base: 1.0.0
+  fx_trade: 1.0.0
+profiles: [semantic]
+default_profile: semantic
+datasets: [fx-basic]
+default_dataset: fx-basic
+current_user: opr_000001
+clock:
+  mode: fixed
+  anchor_date: 2026-10-09
+  timezone: Asia/Shanghai

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pack.schema.json",
+  "$defs": {
+    "Label": {
+      "additionalProperties": false,
+      "description": "Display name of an object or field: ``{ zh: 名称 }`` or ``{ zh: 供应商, en: Supplier }``.",
+      "properties": {
+        "zh": {
+          "minLength": 1,
+          "title": "Zh",
+          "type": "string"
+        },
+        "en": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "En"
+        }
+      },
+      "required": [
+        "zh"
+      ],
+      "title": "Label",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``pack.yaml``: what a pack is, what it needs and which namespaces it takes.\n\n``requires_meta_model`` and the ranges of ``depends_on`` are plain text here and parsed\nin steps 2 and 3 (requirement 2.5). ``description_variants`` may be empty and may name\nan unknown variant: step 7 reports both (requirement 3.1).",
+  "properties": {
+    "pack": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Pack",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    },
+    "title": {
+      "$ref": "#/$defs/Label"
+    },
+    "requires_meta_model": {
+      "minLength": 1,
+      "title": "Requires Meta Model",
+      "type": "string"
+    },
+    "depends_on": {
+      "additionalProperties": false,
+      "default": {},
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "title": "Depends On",
+      "type": "object"
+    },
+    "primitives": {
+      "items": {
+        "enum": [
+          "crud",
+          "numbering",
+          "pricing",
+          "unit_conversion",
+          "state_machine",
+          "conversion",
+          "writeback",
+          "inventory",
+          "rule_expr"
+        ],
+        "type": "string"
+      },
+      "title": "Primitives",
+      "type": "array"
+    },
+    "rule_prefix": {
+      "pattern": "^[A-Z][A-Z0-9]*$",
+      "title": "Rule Prefix",
+      "type": "string"
+    },
+    "id_prefixes": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "title": "Id Prefixes",
+      "type": "array"
+    },
+    "number_prefixes": {
+      "items": {
+        "pattern": "^[A-Z][A-Z0-9]*$",
+        "type": "string"
+      },
+      "title": "Number Prefixes",
+      "type": "array"
+    },
+    "tool_prefixes": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "title": "Tool Prefixes",
+      "type": "array"
+    },
+    "description_variants": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Description Variants",
+      "type": "array"
+    },
+    "license": {
+      "minLength": 1,
+      "title": "License",
+      "type": "string"
+    },
+    "maintainers": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Maintainers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "pack",
+    "version",
+    "title",
+    "requires_meta_model",
+    "primitives",
+    "rule_prefix",
+    "id_prefixes",
+    "number_prefixes",
+    "tool_prefixes",
+    "description_variants",
+    "license",
+    "maintainers"
+  ],
+  "title": "PackManifest",
+  "type": "object"
+}

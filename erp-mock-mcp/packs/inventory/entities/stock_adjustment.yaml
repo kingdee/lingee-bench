@@ -1,0 +1,52 @@
+# 库存调整单：登记一个仓库的盘点差异，审核时按表头的调整原因增减即时库存
+# （docs/packs/example-p2p.md 第 4 节）。
+#
+# 表头的 warehouse_id 是联动的仓库字段，必须是必填 ref 字段（需求 9 第 11 条）：一张单据只调整
+# 一个仓库，所以仓库写在表头，分录只写物料、计量单位与数量。
+# reason 是联动的增减方向字段，必须是表头的必填 enum 字段，它的 values 要被联动的
+# increase 与 decrease 恰好划分（需求 9 第 3 条），见 linkages/stock_adjustment_inventory.yaml。
+#
+# 不启用 pricing：盘点差异只有数量，没有单价与金额。所以分录自己声明数量字段，并用
+# line_quantity 声明数量语义（物料字段、计量单位字段、数量字段），引擎据此补只读的 qty_base，
+# 把 qty 按 core 的单位换算关系折成基本单位（需求 6 第 6 条）。库存按基本单位记账，所以
+# unit_id 缺省取物料的基本单位，而不是采购单位。
+#
+# operations 是 example-p2p.md 第 8 节为本单据列出的三个操作（需求 21 第 4 条）：
+# create、submit、approve。其中 submit 与 approve 的工具不在 M0 工具清单中，由
+# tools/exposure.yaml 的 exclude 去掉；操作本身保留，供领域层、初始数据集构建和包级测试使用。
+# 没有 search 与 get：M0 工具清单里本单据只有 create，所以也不声明 search 配置。
+bill: stock_adjustment
+label: { zh: 库存调整单, en: Stock adjustment }
+id_prefix: sadj
+number: { prefix: KCTZ }
+state_machine: standard
+operations: [create, submit, approve]
+header:
+  warehouse_id:
+    type: ref
+    ref: warehouse
+    label: { zh: 仓库, en: Warehouse }
+    required: true
+  reason:
+    type: enum
+    label: { zh: 调整原因, en: Adjustment reason }
+    required: true
+    values:
+      gain: { zh: 盘盈, en: Gain }
+      loss: { zh: 盘亏, en: Loss }
+lines:
+  material_id:
+    type: ref
+    ref: material
+    label: { zh: 物料, en: Material }
+    required: true
+  unit_id:
+    type: ref
+    ref: unit
+    label: { zh: 计量单位, en: Unit }
+    default_from: material.base_unit_id
+  qty:
+    type: qty
+    label: { zh: 调整数量, en: Adjustment quantity }
+    required: true
+line_quantity: { material_field: material_id, unit_field: unit_id, qty_field: qty }

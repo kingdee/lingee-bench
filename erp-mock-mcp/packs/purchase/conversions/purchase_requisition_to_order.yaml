@@ -1,0 +1,31 @@
+# 采购申请单下推采购订单（需求 21 第 5 条）：require_source_status 为 approved，limit_by 为
+# qty，line_selection 为 by_source_line_id，required_line_inputs 为 source_line_id、qty、price。
+#
+# 额度按数量：每个源行的可下推数量等于它的 qty_base 减去已被本 conversion 生成的未删除订单行
+# 占用的数量，超额时返回 R-GEN-005 并在 details 中给出 pushable_qty（需求 8 第 5 条）。
+#
+# header_mapping 只带入交货日期：订单的交货日期缺省取申请单的需求日期。申请单上没有供应商
+# （询价、比价不在 M0 范围内），所以 supplier_id 在下推后为空，调用方要用 purchase_order_update
+# 补上才能提交（需求 8 第 2 条：下推不因必填字段为空而拒绝）。
+# 注意 R-PUR-001 在 create 时也求值（需求 10 第 9 条），所以需求日期早于下推当天的业务日期时，
+# 本下推会以 VALIDATION_FAILED 结束——数据集里的申请单要把需求日期写在锚点日期当天或之后。
+#
+# line_mapping 带入物料与计量单位，这样订单行的数量口径与申请行一致；单价由调用方输入，
+# 税率不映射，取 entities/purchase_order.yaml 中 default_from: material.tax_rate 的缺省值
+# （需求 8 第 2 条：映射与输入都没涉及的字段才应用缺省值）。
+#
+# 下推工具名为 purchase_order_create_from_requisition，来源简称 requisition 由
+# tools/exposure.yaml 的 source_short_names 声明（需求 11 第 13 条）。
+conversion:
+  id: purchase_requisition_to_order
+  source: purchase_requisition
+  target: purchase_order
+  require_source_status: approved
+  limit_by: qty
+  line_selection: by_source_line_id
+  header_mapping:
+    delivery_date: source.need_date
+  line_mapping:
+    material_id: source_line.material_id
+    unit_id: source_line.unit_id
+  required_line_inputs: [source_line_id, qty, price]

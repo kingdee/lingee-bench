@@ -1,0 +1,29 @@
+# Claude Code harness + GLM-5.2 model, using an Anthropic-compatible endpoint.
+# 真实端点/密钥用 LG_ANTHROPIC_BASE_URL / LG_ANTHROPIC_API_KEY 经 --env-file 提供，只进入代理容器。
+jobs_dir: jobs
+n_attempts: 1
+n_concurrent_trials: 1
+retry:
+  max_retries: 0
+environment:
+  type: docker
+  # 每个 trial 追加模型代理 sidecar；真实端点/密钥只进入代理容器（见 docs/harness-support.md）
+  extra_docker_compose:
+    - configs/compose/model-proxy.yaml
+    # claude-code 只读挂载镜像（lg-bench harness build claude-code）
+    - configs/compose/harness/claude-code.yaml
+agents:
+  # 内置 claude-code 的薄子类：只把 ANTHROPIC_BASE_URL/KEY 换成代理地址与占位密钥
+  - import_path: lg_bench.agents.claude_code:LgClaudeCode
+    model_name: glm-5.2
+    override_timeout_sec: 600
+    # online 模式下载约 232 MB 时需要；image 模式安装为秒级
+    override_setup_timeout_sec: 1800
+    kwargs:
+      # 只用预构建镜像安装；未构建时直接报错（不回退在线安装）
+      install_mode: image
+      version: "2.1.187"
+      max_turns: 30
+      max_budget_usd: "2.00"
+tasks:
+  - path: examples/tasks/ap-three-way-match

@@ -1,0 +1,27 @@
+# OpenCode harness + GLM-5.2，经模型代理 sidecar 的 OpenAI 兼容路由。
+# 适配：Harbor 内置 opencode 的薄子类（自定义 provider 指向代理，占位密钥）。
+# 凭据：--env-file 提供 LG_OPENAI_BASE_URL / LG_OPENAI_API_KEY（只进入代理容器）。
+# OpenCode CLI 没有轮数上限参数，由 override_timeout_sec 约束。
+jobs_dir: jobs
+n_attempts: 1
+n_concurrent_trials: 1
+retry:
+  max_retries: 0
+environment:
+  type: docker
+  # 每个 trial 追加模型代理 sidecar；真实端点/密钥只进入代理容器（见 docs/harness-support.md）
+  extra_docker_compose:
+    - configs/compose/model-proxy.yaml
+    # opencode 只读挂载镜像（lg-bench harness build opencode）
+    - configs/compose/harness/opencode.yaml
+agents:
+  - import_path: lg_bench.agents.opencode:LgOpenCode
+    model_name: glm-5.2
+    override_timeout_sec: 600
+    override_setup_timeout_sec: 1800
+    kwargs:
+      # 只用预构建镜像安装；未构建时直接报错（不回退在线安装）
+      install_mode: image
+      version: "1.19.0"
+tasks:
+  - path: examples/tasks/ap-three-way-match

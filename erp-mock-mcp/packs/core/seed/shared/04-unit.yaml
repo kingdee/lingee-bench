@@ -1,0 +1,8 @@
+# 计量单位：编码在这里写定，供物料、单据分录和换算关系按编码引用。
+# 内部 ID 依次为 unit_000001（PCS）、unit_000002（BOX）、unit_000003（KG）。
+#
+# unit_000001 是 entities/material.yaml 中 base_unit_id 的缺省值，所以 PCS 必须排在最前。
+records:
+  - { kind: unit, code: PCS, name: 示例基本件 }
+  - { kind: unit, code: BOX, name: 示例标准箱 }
+  - { kind: unit, code: KG, name: 示例公斤 }

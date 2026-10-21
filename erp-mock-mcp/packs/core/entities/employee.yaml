@@ -1,0 +1,30 @@
+# 员工：用户上下文实体（需求 1 第 8 条）。当前用户是这里的一条记录，实例配置或初始数据集
+# 的 current_user 写它的内部 ID；context.user.role 可以用在规则表达式里。
+#
+# 共享基础数据，编码由引擎生成（E001、E002……）。第一条的内部 ID 为 emp_000001，
+# 是共享数据建完后第一条用户记录，适合直接做 current_user。
+#
+# operations 声明 search 的理由同 department：配出 example-p2p.md 第 8 节的 employee_search
+# （需求 21 第 4 条），再由 tools/exposure.yaml 的 exclude 去掉。
+entity: employee
+label: { zh: 员工, en: Employee }
+id_prefix: emp
+code: { prefix: E, digits: 3 }
+shared: true
+context: { role: user }
+operations: [search]
+search:
+  keyword_fields: [code, name]
+  filters: [role]
+  default_sort: [code]
+fields:
+  name:          { type: string, label: { zh: 姓名, en: Name }, required: true }
+  department_id: { type: ref, ref: department, label: { zh: 所属部门, en: Department }, required: true }
+  role:
+    type: enum
+    label: { zh: 岗位, en: Role }
+    required: true
+    values:
+      buyer:   { zh: 采购员, en: Buyer }
+      keeper:  { zh: 仓管员, en: Warehouse keeper }
+      manager: { zh: 主管, en: Manager }

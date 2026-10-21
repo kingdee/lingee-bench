@@ -1,0 +1,14 @@
+# adjust 方向：按表头 count_kind 的取值决定增减，increase 与 decrease 必须恰好
+# 划分该字段的 values（需求 9 第 3 条）。
+linkage:
+  id: count_sheet_inventory
+  bill: count_sheet
+  primitive: inventory
+  on: approve
+  direction: adjust
+  warehouse_field: header.depot_id
+  qty_field: line.qty_base
+  adjust:
+    field: header.count_kind
+    increase: [gain]
+    decrease: [loss]

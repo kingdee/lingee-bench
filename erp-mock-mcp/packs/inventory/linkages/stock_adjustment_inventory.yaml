@@ -1,0 +1,22 @@
+# 库存调整单的库存联动（需求 21 第 7 条）：on 为 approve，direction 为 adjust。
+#
+# adjust 方向按表头增减方向字段的取值决定每行的 qty_delta（需求 9 第 2 条）：reason 为
+# gain（盘盈）时取 +qty_base，为 loss（盘亏）时取 -qty_base。increase 与 decrease 所列取值
+# 必须与 header.reason 的 values 完全相同，少一个或多一个加载第 5 步即报错（需求 9 第 3 条）。
+#
+# warehouse_field 是表头的必填 ref 字段，qty_field 只能是 line.qty_base（需求 9 第 11 条）：
+# 库存按基本单位记账，分录写的 qty 由 unit_conversion 原语折算。
+# 反审核时引擎删除本单据审核写入的全部流水并冲回即时库存（需求 9 第 6 条）；无论审核还是反审核，
+# 使任一（物料，仓库）的即时库存小于 0 时报 R-GEN-007 并整体回滚（需求 9 第 4 条）。
+linkage:
+  id: stock_adjustment_inventory
+  bill: stock_adjustment
+  primitive: inventory
+  on: approve
+  direction: adjust
+  warehouse_field: header.warehouse_id
+  qty_field: line.qty_base
+  adjust:
+    field: header.reason
+    increase: [gain]
+    decrease: [loss]

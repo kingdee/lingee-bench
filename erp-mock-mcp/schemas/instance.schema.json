@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "instance.schema.json",
+  "$defs": {
+    "ClockDef": {
+      "additionalProperties": false,
+      "description": "``clock``: how a sandbox gets its anchor date (requirement 16.1, seed-data.md 4).\n\n``today`` reads the system time once, when the sandbox is created, and takes the date\nin ``timezone``, the local time zone of the service process when none is given;\n``fixed`` takes ``anchor_date`` and therefore requires it (requirement 16.3). A date\ngiven for one sandbox (the Admin API, ``--anchor-date``) wins over both, so\n``anchor_date`` stays allowed with mode today.",
+      "properties": {
+        "mode": {
+          "default": "today",
+          "enum": [
+            "today",
+            "fixed"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "anchor_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Anchor Date"
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timezone"
+        }
+      },
+      "title": "ClockDef",
+      "type": "object"
+    },
+    "Label": {
+      "additionalProperties": false,
+      "description": "Display name of an object or field: ``{ zh: 名称 }`` or ``{ zh: 供应商, en: Supplier }``.",
+      "properties": {
+        "zh": {
+          "minLength": 1,
+          "title": "Zh",
+          "type": "string"
+        },
+        "en": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "En"
+        }
+      },
+      "required": [
+        "zh"
+      ],
+      "title": "Label",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``instance.yaml``: the packs, profiles and datasets of a service instance.\n\n``packs`` pins each pack to a concrete version, never a range (requirement 2.3), and\nkeeps the written order, which orders the packs of the instance everywhere else, the\nsorting of configuration errors included (design.md 2.3). ``profiles`` and ``datasets``\nname the definitions in ``profiles/`` and ``datasets/``, and the two defaults select\nthe profile and the dataset of a client that asks for neither (requirement 15.1).\n``current_user`` is the current user of every dataset that does not set its own; it may\nbe left out only when each dataset does set it (requirement 2.10).",
+  "properties": {
+    "instance": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Instance",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "title": "Version",
+      "type": "string"
+    },
+    "title": {
+      "$ref": "#/$defs/Label"
+    },
+    "packs": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "type": "string"
+        }
+      },
+      "title": "Packs",
+      "type": "object"
+    },
+    "profiles": {
+      "items": {
+        "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Profiles",
+      "type": "array"
+    },
+    "default_profile": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Default Profile",
+      "type": "string"
+    },
+    "datasets": {
+      "items": {
+        "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Datasets",
+      "type": "array"
+    },
+    "default_dataset": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Default Dataset",
+      "type": "string"
+    },
+    "current_user": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z][a-z0-9_]*_[0-9]{6,}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Current User"
+    },
+    "clock": {
+      "$ref": "#/$defs/ClockDef",
+      "default": {
+        "mode": "today",
+        "anchor_date": null,
+        "timezone": null
+      }
+    }
+  },
+  "required": [
+    "instance",
+    "version",
+    "title",
+    "packs",
+    "profiles",
+    "default_profile",
+    "datasets",
+    "default_dataset"
+  ],
+  "title": "InstanceDef",
+  "type": "object"
+}

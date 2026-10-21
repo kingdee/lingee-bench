@@ -1,0 +1,28 @@
+# 部门：共享基础数据，员工挂在部门下，采购申请单的申请部门引用它。
+# 编码由引擎按 code 声明生成（D001、D002……），所以共享数据里不写 code
+# （写入只读字段会使构建失败，需求 20 第 6 条）。
+#
+# operations 声明 search，是为了把 example-p2p.md 第 8 节 core 工具面的 department_search
+# 配出来（需求 21 第 4 条）；该工具不在 M0 工具清单中，由 tools/exposure.yaml 的 exclude
+# 去掉，所以 tools/descriptions/zh-detailed.yaml 里没有它的条目。
+entity: department
+label: { zh: 部门, en: Department }
+id_prefix: dept
+code: { prefix: D, digits: 3 }
+shared: true
+operations: [search]
+search:
+  keyword_fields: [code, name]
+  filters: [kind]
+  default_sort: [code]
+fields:
+  name:   { type: string, label: { zh: 名称, en: Name }, required: true }
+  org_id: { type: ref, ref: org, label: { zh: 所属组织, en: Organization }, required: true }
+  kind:
+    type: enum
+    label: { zh: 部门类型, en: Department kind }
+    required: true
+    values:
+      management: { zh: 管理部门, en: Management }
+      sales:      { zh: 销售部门, en: Sales }
+      production: { zh: 生产部门, en: Production }

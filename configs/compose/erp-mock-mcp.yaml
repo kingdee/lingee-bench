@@ -1,0 +1,37 @@
+# 每个 trial 追加的离线 ERP mock sidecar（job YAML 的 environment.extra_docker_compose 引用）。
+# 必须排在 configs/compose/mcp-proxy.yaml 之后：本文件把 lg-mcp-proxy 的 mock 上游指向本容器。
+#
+# - erp-mock 容器以 streamable-http 暴露确定性 ERP mock（评测实例 erp-benchmark，随题集从 Hugging Face
+#   下载到 datasets/environments/erp-mock-mcp/，构建镜像时打入，见 datasets/README.md）。
+#   对 trial 网络监听（--host 0.0.0.0），故按 erp-mock 的安全约束必须带 MCP 端点令牌。
+# - 令牌只用于满足 mock 的"非回环必须有令牌"约束；trial 网络本就隔离，令牌经 compose 注入，
+#   harness 侧只连 http://lg-mcp-proxy:18090/mcp，永远拿不到它。ERP_MOCK_MCP_TOKEN 与代理注入的
+#   LG_MCP_MOCK_HEADERS 都来自同一个 ${LG_ERP_MOCK_TOKEN}，天然对齐。
+# - 路由：job 以 LG_MCP_TARGET=mock（代理默认即 mock）转发到本容器。代理只在 real 模式强制白名单，
+#   但 mock 这边**实际上也必须挂**：erp-benchmark 是一个实例装全部用例，74 个工具的 tools/list
+#   实测响应体约 158 KB（其中 outputSchema 占六成），不收窄会吃掉十几万 token。
+#   每道题挂一份 configs/compose/mcp-allow-<数据集>.yaml，收窄后是十几 KB；
+#   那些片段同时把代理的 mock 上游指到该题自己的数据集。
+# - 默认数据集是 bgt-05。不挂白名单片段时走它，其余用例的工具查不到任何行。
+# - 镜像需预先构建：docker build -f docker/erp-mock-mcp/Dockerfile -t lg-bench/erp-mock-mcp:0.1.0 .
+services:
+  erp-mock:
+    image: ${LG_ERP_MOCK_IMAGE:-lg-bench/erp-mock-mcp:0.1.0}
+    pull_policy: never
+    environment:
+      # --host 0.0.0.0 下 erp-mock 要求配置 MCP 端点令牌，否则拒绝启动。
+      ERP_MOCK_MCP_TOKEN: ${LG_ERP_MOCK_TOKEN:-lg-bench-erp-mock}
+      # 放宽长序列评测的调用上限（默认 500 次/沙箱、20 次/秒是给交互式用的）。
+      ERP_MOCK_MAX_SANDBOX_CALLS: ${LG_ERP_MOCK_MAX_SANDBOX_CALLS:-5000}
+      ERP_MOCK_MAX_CALLS_PER_SECOND: ${LG_ERP_MOCK_MAX_CALLS_PER_SECOND:-2000}
+    # serve 的参数走镜像 CMD（--instance erp-benchmark、--host 0.0.0.0、--port 8000）；
+    # 就绪探针走镜像 HEALTHCHECK（TCP 连 8000）。
+  lg-mcp-proxy:
+    environment:
+      LG_MCP_TARGET: ${LG_MCP_TARGET:-mock}
+      LG_MCP_MOCK_URL: ${LG_MCP_MOCK_URL:-http://erp-mock:8000/mcp}
+      # 与 erp-mock 的 ERP_MOCK_MCP_TOKEN 同源；外层 { } 为 JSON 字面量，内部 ${} 由 compose 插值。
+      LG_MCP_MOCK_HEADERS: '{"Authorization":"Bearer ${LG_ERP_MOCK_TOKEN:-lg-bench-erp-mock}"}'
+    depends_on:
+      erp-mock:
+        condition: service_healthy

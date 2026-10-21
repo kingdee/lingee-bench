@@ -1,0 +1,5 @@
+# Pin the proxy to the model selected by the general smoke job.
+services:
+  lg-model-proxy:
+    environment:
+      LG_PROXY_ALLOWED_MODELS: glm-5.3-flash

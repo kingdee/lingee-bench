@@ -1,0 +1,16 @@
+# 按金额下推：源单为 simple 状态机单据，额度为源单 amount_with_tax 减占用金额
+# （需求 8 第 6 条）。下推工具名中的来源简称见 tools/exposure.yaml 的 source_short_names。
+conversion:
+  id: fee_note_to_pay_slip
+  source: fee_note
+  target: pay_slip
+  require_source_status: approved
+  limit_by: amount
+  line_selection: by_source_line_id
+  header_mapping:
+    vendor_id: source.vendor_id
+    price_includes_tax: source.price_includes_tax
+  line_mapping:
+    item_text: source_line.item_text
+    tax_rate: source_line.tax_rate
+  required_line_inputs: [source_line_id, qty, price]

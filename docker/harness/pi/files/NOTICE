@@ -1,0 +1,5 @@
+本镜像由 lg-bench 构建脚本在用户本机生成，包含：
+
+- Pi coding agent（@earendil-works/pi-coding-agent，MIT，https://github.com/earendil-works/pi）。
+- Node.js 运行时（取自锁定 digest 的官方 node 镜像，MIT 及其捆绑组件许可，见 https://github.com/nodejs/node/blob/main/LICENSE）。
+- npm 依赖树（按 package-lock.json 安装，逐包 license 字段见 packages.json）。若要公开发布，须先补齐完整 SBOM 与第三方许可文本。

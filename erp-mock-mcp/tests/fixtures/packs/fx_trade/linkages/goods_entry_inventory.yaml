@@ -1,0 +1,9 @@
+# in 方向：每行按 +qty_base 增加（存货，仓库）的即时库存；仓库字段在分录上。
+linkage:
+  id: goods_entry_inventory
+  bill: goods_entry
+  primitive: inventory
+  on: approve
+  direction: in
+  warehouse_field: line.depot_id
+  qty_field: line.qty_base

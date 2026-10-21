@@ -1,0 +1,32 @@
+# opencode + GLM-5.3-FLASH 经 MCP 代理连【离线 mock（TC-017 数据集）】跑 ERP评测任务。
+# judge：glm-5.3（经模型代理；LG_EVAL_JUDGE_MODEL 可用环境变量覆盖，缺省 glm-5.3）。
+# 运行：uv run harbor run --config <本文件> --env-file .env.glm
+jobs_dir: jobs
+n_attempts: 1
+n_concurrent_trials: 1
+retry:
+  max_retries: 0
+environment:
+  type: docker
+  extra_docker_compose:
+    - configs/compose/model-proxy.yaml
+    # 顺序：mcp-proxy → erp-mock-mcp → erp-mock-benchmark → 按题白名单(绑定数据集) → judge env → harness
+    - configs/compose/mcp-proxy.yaml
+    - configs/compose/erp-mock-mcp.yaml
+    - configs/compose/erp-mock-benchmark.yaml
+    - configs/compose/mcp-allow-tc-017.yaml
+    - configs/compose/erp-judge-env.yaml
+    - configs/compose/harness/opencode.yaml
+agents:
+  - import_path: lg_bench.agents.opencode:LgOpenCode
+    model_name: glm-5.3-flash
+    override_setup_timeout_sec: 1800
+    kwargs:
+      install_mode: image
+      version: "1.19.0"
+    mcp_servers:
+      - name: erp
+        transport: streamable-http
+        url: http://lg-mcp-proxy:18090/mcp
+tasks:
+  - path: datasets/lg-bench-enterprise-v1.0/tasks/supply-chain-tc-017-L3

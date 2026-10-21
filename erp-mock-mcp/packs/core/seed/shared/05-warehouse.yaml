@@ -1,0 +1,6 @@
+# 仓库：编码由引擎生成，依次为 WH01 到 WH03，内部 ID 依次为 wh_000001 到 wh_000003。
+# 第三条是停用仓库，用来演示 R-GEN-006：停用的基础资料不得写入新单据（需求 5 第 7 条）。
+records:
+  - { kind: warehouse, name: 示例原料仓 }
+  - { kind: warehouse, name: 示例成品仓 }
+  - { kind: warehouse, name: 示例待清理仓, status: disabled }

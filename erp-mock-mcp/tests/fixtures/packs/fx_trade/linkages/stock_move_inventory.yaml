@@ -1,0 +1,10 @@
+# transfer 方向：每行在调出仓写 -qty_base、在调入仓写 +qty_base 两条流水。
+linkage:
+  id: stock_move_inventory
+  bill: stock_move
+  primitive: inventory
+  on: approve
+  direction: transfer
+  from_warehouse_field: header.from_depot_id
+  to_warehouse_field: header.to_depot_id
+  qty_field: line.qty_base

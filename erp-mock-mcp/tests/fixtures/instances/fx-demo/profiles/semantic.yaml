@@ -1,0 +1,10 @@
+# M0 只服务 semantic 工具面，surface、description_variant 与 include_deprecated
+# 取固定值（需求 2 第 13 条）。packs 的顺序即 tools/list 的输出顺序。
+profile: semantic
+version: 1.0.0
+surface: semantic
+description_variant: zh-detailed
+packs: [fx_base, fx_trade]
+include_tools: []
+exclude_tools: []
+include_deprecated: false

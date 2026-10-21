@@ -1,0 +1,11 @@
+# 收料单审核时把每行 qty_base 反写到源行的 linked_qty，各行全部入库后自动关闭源单
+# （需求 8 第 8、13 条）。
+writeback:
+  id: entry_writeback_order
+  conversion: supply_order_to_entry
+  on: approve
+  target: source_line.linked_qty
+  op: add
+  value: line.qty_base
+  reverse_on: unapprove
+  auto_close_source_when: all_lines_linked

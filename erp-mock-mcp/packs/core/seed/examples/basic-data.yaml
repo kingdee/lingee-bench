@@ -1,0 +1,35 @@
+# 示例数据（seed-data.md 第 1 节）：只供编写工具描述时引用，框架从不读取本目录
+# （需求 20 第 8 条），所以这里的记录不进入任何初始数据集，也不参与快照构建。
+#
+# 为什么要单独放一份：工具描述里不得出现初始数据集中实体记录的名称、编码和单据编号
+# （需求 3 第 5 条），加载第 8 步之后会把每条描述与数据集里的业务数据逐一比对。描述需要举例
+# 时，例子必须取自这里，而这里的取值不得与任何初始数据集重合。
+#
+# 当前 tools/descriptions/zh-detailed.yaml 只写含义、格式、取值来源与缺省行为，没有引用具体
+# 取值，所以下面这些记录只是备选例子。比对按子串、ASCII 字母不区分大小写进行，短编码很容易
+# 误报，所以取值都带"示例"二字——`ORG01`、`D001`、`PCS` 这类共享数据的编码不能当例子用。
+#
+# 写法与初始数据集的 entities 相同（seed-data.md 第 2 节）：键是别名，ref 字段去掉 _id 后缀
+# 书写，值是别名或被引用记录的编码；名为 kind 的字段写成 material_kind。这样可以直接拷进一个
+# 数据集试跑，但一旦拷过去，描述里引用它的例子就违反需求 3 第 5 条了。
+entities:
+  supplier:example_fastener:
+    kind: supplier
+    name: 示例紧固件供应商
+    short_name: 示例紧固
+    payment_term_days: 45
+    default_tax_rate: "0.13"
+  material:example_bolt:
+    kind: material
+    name: 示例六角螺栓
+    spec: 示例规格 M8X40
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: BOX
+    tax_rate: "0.13"
+    standard_cost: "0.85"
+  unit_conversion:example_bolt_box:
+    kind: unit_conversion
+    material: "material:example_bolt"
+    from_unit: BOX
+    factor: "12"

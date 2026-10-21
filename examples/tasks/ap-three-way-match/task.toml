@@ -1,0 +1,28 @@
+schema_version = "1.3"
+artifacts = ["/workspace/output"]
+
+[metadata]
+task_id = "ap-three-way-match"
+task_version = "0.1.1"
+domain = "finance"
+subdomain = "accounts_payable"
+secondary_domains = ["supply_chain"]
+role = "accounts-payable-specialist"
+difficulty = "medium"
+interaction = "files"
+split = "dev"
+scenario_family = "procure-to-pay-match"
+data_source = "original-synthetic"
+language = "zh-CN"
+
+[agent]
+timeout_sec = 600
+
+[verifier]
+timeout_sec = 60
+
+[environment]
+build_timeout_sec = 300
+cpus = 1
+memory_mb = 1024
+storage_mb = 2048

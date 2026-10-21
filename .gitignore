@@ -1,0 +1,26 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+results/
+dist/
+*.egg-info/
+# 本机凭据（模板见 .env.example）
+.env
+.env.*
+!.env.example
+# Harbor 运行结果
+/jobs/
+# 题集与评测环境从 Hugging Face 下载，不入库（见 datasets/README.md）
+/datasets/*
+!/datasets/README.md
+!/datasets/.gitkeep
+# 本机私有的 job / compose 覆盖
+/configs/jobs/**/*.local.yaml
+/configs/compose/*.local.yaml
+/scripts/*.local.sh
+# harness 镜像制品缓存与本地构建记录（lg-bench harness build）
+/.cache/
+/*.zip

@@ -1,0 +1,38 @@
+# 物料类实体：基本单位 base_measure_id、采购单位 buy_measure_id（缺省取基本单位）和
+# 换算关系实体 measure_link（需求 6 第 8 条）；tax_rate 带允许值列表（需求 1 第 7 条）。
+entity: article
+label: { zh: 存货, en: Article }
+id_prefix: art
+code: { prefix: A, digits: 5 }
+operations: [search, get]
+unit_conversion:
+  base_unit_field: base_measure_id
+  entity: measure_link
+  material_field: article_id
+  unit_field: alt_measure_id
+  factor_field: ratio
+search:
+  keyword_fields: [code, name, spec]
+  filters: [grade]
+  default_sort: [code]
+fields:
+  name: { type: string, label: { zh: 名称, en: Name }, required: true }
+  spec: { type: string, label: { zh: 规格, en: Specification } }
+  grade:
+    type: enum
+    label: { zh: 存货类别, en: Grade }
+    required: true
+    values:
+      plain: { zh: 普通件, en: Plain }
+      fine:  { zh: 精密件, en: Fine }
+  base_measure_id: { type: ref, ref: measure, label: { zh: 基本单位, en: Base measure }, required: true }
+  buy_measure_id:
+    type: ref
+    ref: measure
+    label: { zh: 采购单位, en: Purchase measure }
+    default_from: base_measure.id
+  tax_rate:
+    type: rate
+    label: { zh: 税率, en: Tax rate }
+    values: ["0", "0.06", "0.09", "0.13"]
+    default: "0.13"

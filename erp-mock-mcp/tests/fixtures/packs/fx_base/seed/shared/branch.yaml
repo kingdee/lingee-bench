@@ -1,0 +1,6 @@
+# 共享基础数据（seed-data.md 第 1 节）：业务包提供的组织。shared 为 true 的实体的记录
+# 由这里提供，数据集只用 include_shared 引入（需求 20 第 17 条）。
+# branch 不声明 code 生成规则，所以编码在这里写定；is_primary 为 true 的这一条是缺省组织。
+# 内部 ID 为 br_000001，是 depot 与 operator 记录引用的那一条。
+records:
+  - { kind: branch, code: BR01, name: 夹具核算本部, is_primary: true }

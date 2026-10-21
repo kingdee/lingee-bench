@@ -1,0 +1,11 @@
+# 付款单审核时把表头价税合计反写到源单表头的 linked_amount（需求 8 第 8 条）。
+# 源单是 simple 状态机单据，没有 closed 状态，所以不声明 auto_close_source_when
+# （需求 7 第 11 条）。
+writeback:
+  id: pay_writeback_fee
+  conversion: fee_note_to_pay_slip
+  on: approve
+  target: source.linked_amount
+  op: add
+  value: header.amount_with_tax
+  reverse_on: unapprove

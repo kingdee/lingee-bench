@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "exposure.schema.json",
+  "$defs": {
+    "DeclarativeQueryDef": {
+      "additionalProperties": false,
+      "description": "A query declared by source, params, filter, sort and returns (requirement 5.13).\n\n``source`` is an entity, a bill or a bill's lines (``<bill>_line``); ``filter`` is a\nrule expression that may use ``line.`` only when the source is a bill's lines\n(requirement 10.10). Step 5 resolves the source and checks the filter.",
+      "properties": {
+        "tool": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Tool",
+          "type": "string"
+        },
+        "source": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Source",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": false,
+          "default": {},
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "$ref": "#/$defs/QueryParamDef"
+            }
+          },
+          "title": "Params",
+          "type": "object"
+        },
+        "filter": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filter"
+        },
+        "sort": {
+          "default": [],
+          "items": {
+            "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*(?: (?:asc|desc))?$",
+            "type": "string"
+          },
+          "title": "Sort",
+          "type": "array"
+        },
+        "returns": {
+          "$ref": "#/$defs/QueryReturnsDef"
+        }
+      },
+      "required": [
+        "tool",
+        "source",
+        "returns"
+      ],
+      "title": "DeclarativeQueryDef",
+      "type": "object"
+    },
+    "PrimitiveQueryDef": {
+      "additionalProperties": false,
+      "description": "A query a primitive provides, such as the stock balance of the inventory primitive.\n\n``primitive`` and ``query`` name it; step 5 checks that the primitive provides that\nquery and that the pack declares the primitive (requirement 2.6), and the primitive\nitself defines the parameters and the result (requirement 9.7).",
+      "properties": {
+        "tool": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Tool",
+          "type": "string"
+        },
+        "primitive": {
+          "enum": [
+            "crud",
+            "numbering",
+            "pricing",
+            "unit_conversion",
+            "state_machine",
+            "conversion",
+            "writeback",
+            "inventory",
+            "rule_expr"
+          ],
+          "title": "Primitive",
+          "type": "string"
+        },
+        "query": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "primitive",
+        "query"
+      ],
+      "title": "PrimitiveQueryDef",
+      "type": "object"
+    },
+    "QueryHistoryDef": {
+      "additionalProperties": false,
+      "description": "History fields and row limit; opt-in pagination makes the limit a per-page cap.",
+      "properties": {
+        "fields": {
+          "items": {
+            "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        },
+        "limit": {
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "paginate": {
+          "default": false,
+          "title": "Paginate",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "fields",
+        "limit"
+      ],
+      "title": "QueryHistoryDef",
+      "type": "object"
+    },
+    "QueryParamDef": {
+      "additionalProperties": false,
+      "description": "A parameter of a declarative query (tool-design.md section 2).\n\n``maps_to`` names the field of the source record the value is compared with; a record is\nselected when every given parameter equals its field and the filter is true\n(requirement 5.13). A ref parameter declares the entity it refers to, as a ref field\ndoes (requirement 1.12).",
+      "properties": {
+        "type": {
+          "enum": [
+            "string",
+            "text",
+            "int",
+            "bool",
+            "enum",
+            "date",
+            "period",
+            "qty",
+            "price",
+            "money",
+            "rate",
+            "ref"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "maps_to": {
+          "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+          "title": "Maps To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "maps_to"
+      ],
+      "title": "QueryParamDef",
+      "type": "object"
+    },
+    "QueryReturnsDef": {
+      "additionalProperties": false,
+      "description": "``returns``: the fields of the first matching record, and optionally of the history.\n\nWithout ``history`` the query returns only ``latest`` (requirement 5.13).",
+      "properties": {
+        "latest": {
+          "items": {
+            "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Latest",
+          "type": "array"
+        },
+        "history": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QueryHistoryDef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "latest"
+      ],
+      "title": "QueryReturnsDef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``tools/exposure.yaml``: which tools the pack exposes (tool-design.md section 2).\n\nThe generated tools are those of the operations, the conversions and ``queries``;\n``exclude`` drops tools and ``rename`` renames them, both named by the generated name\n(requirement 11.1). ``source_short_names`` gives the short name of a source bill used\nin a push tool's name and in its ``<short name>_id`` parameter, which defaults to the\nsource bill's name (requirement 11.13). Step 6 checks the resulting names.",
+  "properties": {
+    "pack": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Pack",
+      "type": "string"
+    },
+    "exclude": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "type": "string"
+      },
+      "title": "Exclude",
+      "type": "array"
+    },
+    "rename": {
+      "additionalProperties": false,
+      "default": {},
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "type": "string"
+        }
+      },
+      "title": "Rename",
+      "type": "object"
+    },
+    "source_short_names": {
+      "additionalProperties": false,
+      "default": {},
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "type": "string"
+        }
+      },
+      "title": "Source Short Names",
+      "type": "object"
+    },
+    "queries": {
+      "default": [],
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/DeclarativeQueryDef"
+          },
+          {
+            "$ref": "#/$defs/PrimitiveQueryDef"
+          }
+        ]
+      },
+      "title": "Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "pack"
+  ],
+  "title": "ExposureDef",
+  "type": "object"
+}

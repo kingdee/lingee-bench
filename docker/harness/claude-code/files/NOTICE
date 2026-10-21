@@ -1,0 +1,6 @@
+本镜像由 lg-bench 构建脚本在用户本机生成，包含：
+
+- Claude Code CLI 二进制（Anthropic 专有软件）。它从上游官方地址下载，并按 harness-lock.json 中的 sha256 校验。
+  其使用受 Anthropic 条款约束：https://www.anthropic.com/legal/commercial-terms
+  lg-bench 不分发该二进制。本镜像不得公开发布或再分发；内部缓存与传递方式须先完成许可核验。
+- procps / libproc2（Debian bookworm 2:4.0.2-3）。许可见同目录下的 *.copyright，主要为 GPL-2.0+ / LGPL-2.1+。

@@ -1,0 +1,810 @@
+# zh-detailed 描述（tool-design.md 第 3 节）：tools/list 中的工具描述与参数描述逐字取自这里
+# （需求 3 第 7 条）。每个工具按功能、适用范围、前置条件、副作用、返回五项书写，工具描述不超过
+# 400 个码位；每个顶层参数、lines 本身以及 lines 元素中的每个参数都要有描述（需求 3 第 2、3 条）。
+# 工具名已应用 tools/exposure.yaml：count_sheet_unapprove 被 exclude 去掉，stock_move_create
+# 改名为 stock_move_draft_create，下推工具名中的来源简称取 source_short_names（需求 11 第 1、13 条）。
+# R-FXT-002 是 described 规则，它的 description.zh 原样出现在 count_sheet_create 的描述里
+# （需求 3 第 6 条）。描述中不出现初始数据集里的名称、编码与单据编号，也不出现引导性用语。
+variant: zh-detailed
+tools:
+  # ---------- 盘点单：adjust 方向的库存联动，没有反审核工具 ----------
+  count_sheet_search:
+    description: |-
+      按关键字、状态和业务日期范围分页检索盘点单，返回单据摘要。
+      如需一张盘点单的全部字段与分录，请使用 count_sheet_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；不填时返回全部状态
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  count_sheet_get:
+    description: |-
+      按内部 ID 获取单张盘点单的表头全部字段和全部分录。
+      如需按编号、状态或业务日期范围查找盘点单，请使用 count_sheet_search。
+      前置条件：id 由 count_sheet_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、depot（盘点仓库）、count_kind、remark，以及按 line_no 升序的分录，每项含 line_no、article、measure、diff_qty 和 qty_base（基本单位数量）。
+    params:
+      id: 盘点单的内部 ID，由 count_sheet_search 返回
+  count_sheet_create:
+    description: |-
+      新建盘点单草稿，登记一个仓库的盘盈或盘亏差异数量。
+      盘点单只用于登记盘点差异，采购收料必须通过收料单入库；如需在两个仓库之间移库，请使用 stock_move_draft_create。
+      前置条件：存货与仓库为启用状态，全部分录属于表头的盘点仓库。
+      副作用：只生成 draft 草稿，不改变即时库存；审核后才按 count_kind 增减库存。
+      返回：新建后的盘点单，含 id、number、status 和全部分录。
+    params:
+      depot_id: 盘点仓库的内部 ID，由 depot_search 返回
+      count_kind: 盘点结果，gain 为盘盈（审核后增加库存），loss 为盘亏（审核后减少库存）
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      remark: 备注；不填时为空
+      lines: 盘点分录数组，1 到 200 个元素
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].diff_qty: 差异数量，大于 0，最多 4 位小数；盘盈还是盘亏由表头的 count_kind 决定
+  count_sheet_update:
+    description: |-
+      修改盘点单草稿的表头字段与分录。
+      如需删除整张草稿，请使用 count_sheet_delete。
+      前置条件：单据状态为 draft，id 由 count_sheet_search 返回。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；未提供的可写表头字段保持原值；不改变即时库存。
+      返回：修改后的盘点单，含表头全部字段和全部分录。
+    params:
+      id: 盘点单的内部 ID，由 count_sheet_search 返回
+      depot_id: 盘点仓库的内部 ID，由 depot_search 返回；不填时保持原值
+      count_kind: 盘点结果，gain 为盘盈，loss 为盘亏；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 盘点分录数组，1 到 200 个元素；不填时原分录保持不变
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].diff_qty: 差异数量，大于 0，最多 4 位小数
+  count_sheet_delete:
+    description: |-
+      删除盘点单草稿，物理删除表头与全部分录。
+      如需只改写草稿内容，请使用 count_sheet_update。
+      前置条件：单据状态为 draft。
+      副作用：删除后以该 id 调用 count_sheet_get 返回 NOT_FOUND，检索结果中也不再含该单据；已审核单据不能删除。
+      返回：删除结果，含被删除盘点单的 id。
+    params:
+      id: 盘点单的内部 ID，由 count_sheet_search 返回
+  count_sheet_submit:
+    description: |-
+      提交盘点单，使状态由 draft 变为 submitted。
+      如需撤回提交，请使用 count_sheet_unsubmit。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段都有值。
+      副作用：只改变单据状态，不改变即时库存。
+      返回：提交后的盘点单，含表头全部字段和全部分录。
+    params:
+      id: 盘点单的内部 ID，由 count_sheet_search 返回
+  count_sheet_unsubmit:
+    description: |-
+      撤回盘点单的提交，使状态由 submitted 变为 draft。
+      如需审核该单据，请使用 count_sheet_approve。
+      前置条件：单据状态为 submitted。
+      副作用：只改变单据状态，不改变即时库存；回到 draft 后可以继续修改或删除。
+      返回：撤回提交后的盘点单，含表头全部字段和全部分录。
+    params:
+      id: 盘点单的内部 ID，由 count_sheet_search 返回
+  count_sheet_approve:
+    description: |-
+      审核盘点单，使状态由 submitted 变为 approved。
+      如需先撤回提交再修改，请使用 count_sheet_unsubmit。
+      前置条件：单据状态为 submitted。
+      副作用：按表头 count_kind 为每行写一条库存流水，gain 增加、loss 减少（存货，盘点仓库）的即时库存；使任一即时库存小于 0 时报错并整体回滚。本业务包不提供盘点单的反审核工具，审核后状态不能再退回。
+      返回：审核后的盘点单，含表头全部字段和全部分录。
+    params:
+      id: 盘点单的内部 ID，由 count_sheet_search 返回
+
+  # ---------- 费用单：simple 状态机，pricing，按金额下推付款单的来源 ----------
+  fee_note_search:
+    description: |-
+      按关键字、状态、往来单位和业务日期范围分页检索费用单，返回单据摘要。
+      如需一张费用单的全部字段与分录，请使用 fee_note_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date、vendor、amount_with_tax）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，approved 为已审核；本单据没有提交与关闭环节；不填时返回全部状态
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时不按往来单位过滤
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  fee_note_get:
+    description: |-
+      按内部 ID 获取单张费用单的表头全部字段和全部分录。
+      如需按编号、往来单位或业务日期范围查找费用单，请使用 fee_note_search。
+      前置条件：id 由 fee_note_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、vendor、due_date、price_includes_tax、amount、tax_amount、amount_with_tax、linked_amount（已下推付款金额）、remark，以及按 line_no 升序的分录。
+    params:
+      id: 费用单的内部 ID，由 fee_note_search 返回
+  fee_note_create:
+    description: |-
+      新建费用单草稿，登记一笔应付给往来单位的费用。
+      如需登记采购到货，请使用 goods_entry_create；如需付款，请使用 pay_slip_create_from_fee。
+      前置条件：往来单位为启用状态，id 由 vendor_search 返回。
+      副作用：只生成 draft 草稿；本单据没有提交环节，审核后才能按金额下推付款单。
+      返回：新建后的费用单，含 id、number、status、各金额字段和全部分录。
+    params:
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回
+      due_date: 到期日，YYYY-MM-DD
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      price_includes_tax: 单价是否含税，true 时按含税单价反算不含税金额；不填时为 true
+      remark: 备注；不填时为空
+      lines: 费用分录数组，1 到 200 个元素
+      lines[].item_text: 费用项目的说明文字
+      lines[].tax_rate: 税率，最多 4 位小数；不填时为 0.06
+      lines[].qty: 数量，大于 0，最多 4 位小数
+      lines[].price: 单价，不小于 0，最多 6 位小数；是否含税由表头 price_includes_tax 决定
+  fee_note_update:
+    description: |-
+      修改费用单草稿的表头字段与分录。
+      如需删除整张草稿，请使用 fee_note_delete。
+      前置条件：单据状态为 draft，id 由 fee_note_search 返回。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；只修改 price_includes_tax 时全部金额按新口径重算。
+      返回：修改后的费用单，含表头全部字段和全部分录。
+    params:
+      id: 费用单的内部 ID，由 fee_note_search 返回
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时保持原值
+      due_date: 到期日，YYYY-MM-DD；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值
+      price_includes_tax: 单价是否含税；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 费用分录数组，1 到 200 个元素；不填时原分录保持不变
+      lines[].item_text: 费用项目的说明文字
+      lines[].tax_rate: 税率，最多 4 位小数；不填时为 0.06
+      lines[].qty: 数量，大于 0，最多 4 位小数
+      lines[].price: 单价，不小于 0，最多 6 位小数
+  fee_note_delete:
+    description: |-
+      删除费用单草稿，物理删除表头与全部分录。
+      如需只改写草稿内容，请使用 fee_note_update。
+      前置条件：单据状态为 draft。
+      副作用：删除后以该 id 调用 fee_note_get 返回 NOT_FOUND，检索结果中也不再含该单据；已审核单据不能删除。
+      返回：删除结果，含被删除费用单的 id。
+    params:
+      id: 费用单的内部 ID，由 fee_note_search 返回
+  fee_note_approve:
+    description: |-
+      审核费用单，使状态由 draft 变为 approved。
+      如需退回草稿，请使用 fee_note_unapprove。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含每行的数量、单价、税率）都有值；本单据没有提交环节，直接由草稿审核。
+      副作用：只改变单据状态，不改变即时库存；审核后该单据才能按金额下推付款单。
+      返回：审核后的费用单，含表头全部字段和全部分录。
+    params:
+      id: 费用单的内部 ID，由 fee_note_search 返回
+  fee_note_unapprove:
+    description: |-
+      反审核费用单，使状态由 approved 变为 draft。
+      如需重新审核，请使用 fee_note_approve。
+      前置条件：单据状态为 approved，且没有由它下推生成的付款单（含草稿），否则报错。
+      副作用：只改变单据状态；回到 draft 后可以继续修改或删除。
+      返回：反审核后的费用单，含表头全部字段和全部分录。
+    params:
+      id: 费用单的内部 ID，由 fee_note_search 返回
+
+  # ---------- 收料单：供货订单按数量下推的目标，in 方向的库存联动 ----------
+  goods_entry_search:
+    description: |-
+      按关键字、状态、往来单位和业务日期范围分页检索收料单，返回单据摘要。
+      如需一张收料单的全部字段与分录，请使用 goods_entry_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date、vendor）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；不填时返回全部状态
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时不按往来单位过滤
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  goods_entry_get:
+    description: |-
+      按内部 ID 获取单张收料单的表头全部字段和全部分录。
+      如需按编号、往来单位或业务日期范围查找收料单，请使用 goods_entry_search。
+      前置条件：id 由 goods_entry_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、vendor、entry_ref、source_bill_type、source_bill_id、remark，以及按 line_no 升序的分录，每项含 line_no、article、measure、depot、entry_qty、qty_base 和 source_line_id。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+  goods_entry_create:
+    description: |-
+      新建收料单草稿，登记不经供货订单的直接收料。
+      如需按已审核的供货订单收料，请使用 goods_entry_create_from_order；如需登记盘盈，请使用 count_sheet_create。
+      前置条件：往来单位、存货和仓库为启用状态。
+      副作用：只生成 draft 草稿，不改变即时库存；审核后才按每行的基本单位数量增加库存。本工具生成的单据没有来源订单，审核时不反写任何订单。
+      返回：新建后的收料单，含 id、number、status 和全部分录。
+    params:
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回
+      entry_ref: 来料单号，同一个单号只能登记一张收料单；不填时为空
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      remark: 备注；不填时为空
+      lines: 收料分录数组，1 到 200 个元素
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].depot_id: 收料仓库的内部 ID，由 depot_search 返回
+      lines[].entry_qty: 收料数量，大于 0，最多 4 位小数，单行不超过 1000，一张单据合计不超过 2000；单位见 measure_id，换算成基本单位后计入库存
+  goods_entry_update:
+    description: |-
+      修改收料单草稿的表头字段与分录。
+      如需删除整张草稿，请使用 goods_entry_delete。
+      前置条件：单据状态为 draft，id 由 goods_entry_search 返回。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；由供货订单下推生成的草稿不允许提供 lines，只能修改表头。
+      返回：修改后的收料单，含表头全部字段和全部分录。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时保持原值
+      entry_ref: 来料单号，同一个单号只能登记一张收料单；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 收料分录数组，1 到 200 个元素；不填时原分录保持不变
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].depot_id: 收料仓库的内部 ID，由 depot_search 返回
+      lines[].entry_qty: 收料数量，大于 0，最多 4 位小数，单行不超过 1000，一张单据合计不超过 2000
+  goods_entry_delete:
+    description: |-
+      删除收料单草稿，物理删除表头与全部分录。
+      如需只改写草稿内容，请使用 goods_entry_update。
+      前置条件：单据状态为 draft。
+      副作用：删除后以该 id 调用 goods_entry_get 返回 NOT_FOUND；由供货订单下推生成的草稿被删除后，相应订单行的可收料数量恢复。
+      返回：删除结果，含被删除收料单的 id。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+  goods_entry_submit:
+    description: |-
+      提交收料单，使状态由 draft 变为 submitted。
+      如需撤回提交，请使用 goods_entry_unsubmit。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含每行的存货、计量单位、收料数量和收料仓库）都有值。
+      副作用：只改变单据状态，不改变即时库存。
+      返回：提交后的收料单，含表头全部字段和全部分录。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+  goods_entry_unsubmit:
+    description: |-
+      撤回收料单的提交，使状态由 submitted 变为 draft。
+      如需审核该单据，请使用 goods_entry_approve。
+      前置条件：单据状态为 submitted。
+      副作用：只改变单据状态，不改变即时库存；回到 draft 后可以继续修改表头。
+      返回：撤回提交后的收料单，含表头全部字段和全部分录。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+  goods_entry_approve:
+    description: |-
+      审核收料单，使状态由 submitted 变为 approved。
+      如需退回草稿，请使用 goods_entry_unapprove。
+      前置条件：单据状态为 submitted。
+      副作用：为每行写一条库存流水，按基本单位数量增加（存货，收料仓库）的即时库存；由供货订单下推生成时，把每行的基本单位数量累加到来源订单行的 linked_qty，订单各行都收足后自动关闭订单。
+      返回：审核后的收料单，含表头全部字段和全部分录。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+  goods_entry_unapprove:
+    description: |-
+      反审核收料单，使状态由 approved 变为 draft。
+      如需重新审核，请使用 goods_entry_approve。
+      前置条件：单据状态为 approved，且没有由它下推生成的下游单据。
+      副作用：删除本单据审核时写入的库存流水并相应减少即时库存，冲回来源订单行的 linked_qty；因本单据自动关闭的订单退回 approved。使任一即时库存小于 0 时报错并整体回滚。
+      返回：反审核后的收料单，含表头全部字段和全部分录。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+  goods_entry_close:
+    description: |-
+      关闭收料单，使状态由 approved 变为 closed，表示该单据的后续处理已结束。
+      如需重新打开，请使用 goods_entry_unclose。
+      前置条件：单据状态为 approved。
+      副作用：只改变单据状态，不改变即时库存与反写；关闭方式记为手工关闭。
+      返回：关闭后的收料单，含表头全部字段和全部分录。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+  goods_entry_unclose:
+    description: |-
+      反关闭收料单，使状态由 closed 变为 approved。
+      如需再次关闭，请使用 goods_entry_close。
+      前置条件：单据状态为 closed，且关闭方式为手工关闭；自动关闭的单据不能用本工具打开。
+      副作用：只改变单据状态，不改变即时库存与反写。
+      返回：反关闭后的收料单，含表头全部字段和全部分录。
+    params:
+      id: 收料单的内部 ID，由 goods_entry_search 返回
+
+  # ---------- 发料单：out 方向的库存联动，领用人缺省取当前用户 ----------
+  issue_note_search:
+    description: |-
+      按关键字、状态和业务日期范围分页检索发料单，返回单据摘要。
+      如需一张发料单的全部字段与分录，请使用 issue_note_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；不填时返回全部状态
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  issue_note_get:
+    description: |-
+      按内部 ID 获取单张发料单的表头全部字段和全部分录。
+      如需按编号、状态或业务日期范围查找发料单，请使用 issue_note_search。
+      前置条件：id 由 issue_note_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、depot（发料仓库）、taker（领用人）、remark，以及按 line_no 升序的分录，每项含 line_no、article、measure、issue_qty 和 qty_base。
+    params:
+      id: 发料单的内部 ID，由 issue_note_search 返回
+  issue_note_create:
+    description: |-
+      新建发料单草稿，登记从一个仓库领用存货。
+      如需登记盘亏，请使用 count_sheet_create；如需在两个仓库之间移库，请使用 stock_move_draft_create。
+      前置条件：存货与仓库为启用状态，全部分录从表头的发料仓库发出。
+      副作用：只生成 draft 草稿，不改变即时库存；审核后才按每行的基本单位数量减少库存，库存不足时审核报错。
+      返回：新建后的发料单，含 id、number、status 和全部分录。
+    params:
+      depot_id: 发料仓库的内部 ID，由 depot_search 返回
+      taker_id: 领用人的内部 ID；不填时取当前用户，当前用户见 business_context_get
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      remark: 备注；不填时为空
+      lines: 发料分录数组，1 到 200 个元素
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].issue_qty: 发料数量，大于 0，最多 4 位小数；单位见 measure_id，换算成基本单位后从库存中减少
+  issue_note_update:
+    description: |-
+      修改发料单草稿的表头字段与分录。
+      如需删除整张草稿，请使用 issue_note_delete。
+      前置条件：单据状态为 draft，id 由 issue_note_search 返回。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；未提供的可写表头字段保持原值；不改变即时库存。
+      返回：修改后的发料单，含表头全部字段和全部分录。
+    params:
+      id: 发料单的内部 ID，由 issue_note_search 返回
+      depot_id: 发料仓库的内部 ID，由 depot_search 返回；不填时保持原值
+      taker_id: 领用人的内部 ID；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 发料分录数组，1 到 200 个元素；不填时原分录保持不变
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].issue_qty: 发料数量，大于 0，最多 4 位小数
+  issue_note_delete:
+    description: |-
+      删除发料单草稿，物理删除表头与全部分录。
+      如需只改写草稿内容，请使用 issue_note_update。
+      前置条件：单据状态为 draft。
+      副作用：删除后以该 id 调用 issue_note_get 返回 NOT_FOUND，检索结果中也不再含该单据；已审核单据不能删除。
+      返回：删除结果，含被删除发料单的 id。
+    params:
+      id: 发料单的内部 ID，由 issue_note_search 返回
+  issue_note_submit:
+    description: |-
+      提交发料单，使状态由 draft 变为 submitted。
+      如需撤回提交，请使用 issue_note_unsubmit。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段都有值。
+      副作用：只改变单据状态，不改变即时库存。
+      返回：提交后的发料单，含表头全部字段和全部分录。
+    params:
+      id: 发料单的内部 ID，由 issue_note_search 返回
+  issue_note_unsubmit:
+    description: |-
+      撤回发料单的提交，使状态由 submitted 变为 draft。
+      如需审核该单据，请使用 issue_note_approve。
+      前置条件：单据状态为 submitted。
+      副作用：只改变单据状态，不改变即时库存；回到 draft 后可以继续修改或删除。
+      返回：撤回提交后的发料单，含表头全部字段和全部分录。
+    params:
+      id: 发料单的内部 ID，由 issue_note_search 返回
+  issue_note_approve:
+    description: |-
+      审核发料单，使状态由 submitted 变为 approved。
+      如需退回草稿，请使用 issue_note_unapprove。
+      前置条件：单据状态为 submitted；各行按基本单位折算后，发料仓库的即时库存足以支撑本次发料。
+      副作用：为每行写一条库存流水，按基本单位数量减少（存货，发料仓库）的即时库存；使任一即时库存小于 0 时报错并整体回滚。
+      返回：审核后的发料单，含表头全部字段和全部分录。
+    params:
+      id: 发料单的内部 ID，由 issue_note_search 返回
+  issue_note_unapprove:
+    description: |-
+      反审核发料单，使状态由 approved 变为 draft。
+      如需重新审核，请使用 issue_note_approve。
+      前置条件：单据状态为 approved。
+      副作用：删除本单据审核时写入的库存流水，把发出的基本单位数量加回（存货，发料仓库）的即时库存。
+      返回：反审核后的发料单，含表头全部字段和全部分录。
+    params:
+      id: 发料单的内部 ID，由 issue_note_search 返回
+
+  # ---------- 付款单：费用单按金额下推的目标，pricing，不声明数量语义 ----------
+  pay_slip_search:
+    description: |-
+      按关键字、状态、往来单位和业务日期范围分页检索付款单，返回单据摘要。
+      如需一张付款单的全部字段与分录，请使用 pay_slip_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date、vendor、amount_with_tax）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；不填时返回全部状态
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时不按往来单位过滤
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  pay_slip_get:
+    description: |-
+      按内部 ID 获取单张付款单的表头全部字段和全部分录。
+      如需按编号、往来单位或业务日期范围查找付款单，请使用 pay_slip_search。
+      前置条件：id 由 pay_slip_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、vendor、pay_mode、price_includes_tax、amount、tax_amount、amount_with_tax、source_bill_type、source_bill_id、remark，以及按 line_no 升序的分录。
+    params:
+      id: 付款单的内部 ID，由 pay_slip_search 返回
+  pay_slip_create:
+    description: |-
+      新建付款单草稿，登记一笔与费用单无关的付款。
+      如需按已审核的费用单付款，请使用 pay_slip_create_from_fee。
+      前置条件：往来单位为启用状态，id 由 vendor_search 返回。
+      副作用：只生成 draft 草稿；本工具生成的单据没有来源费用单，审核时不反写任何费用单的已付金额。
+      返回：新建后的付款单，含 id、number、status、各金额字段和全部分录。
+    params:
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回
+      pay_mode: 结算方式，cash 为现金，transfer 为转账；不填时为 transfer
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      price_includes_tax: 单价是否含税，true 时按含税单价反算不含税金额；不填时为 true
+      remark: 备注；不填时为空
+      lines: 付款分录数组，1 到 200 个元素
+      lines[].item_text: 费用项目的说明文字
+      lines[].qty: 数量，大于 0，最多 4 位小数
+      lines[].price: 单价，不小于 0，最多 6 位小数；是否含税由表头 price_includes_tax 决定
+      lines[].tax_rate: 税率，最多 4 位小数；不填时为空，提交前必须有值
+  pay_slip_update:
+    description: |-
+      修改付款单草稿的表头字段与分录。
+      如需删除整张草稿，请使用 pay_slip_delete。
+      前置条件：单据状态为 draft，id 由 pay_slip_search 返回。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；由费用单下推生成的草稿不允许提供 lines，只能修改表头。
+      返回：修改后的付款单，含表头全部字段和全部分录。
+    params:
+      id: 付款单的内部 ID，由 pay_slip_search 返回
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时保持原值
+      pay_mode: 结算方式，cash 为现金，transfer 为转账；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值
+      price_includes_tax: 单价是否含税；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 付款分录数组，1 到 200 个元素；不填时原分录保持不变
+      lines[].item_text: 费用项目的说明文字
+      lines[].qty: 数量，大于 0，最多 4 位小数
+      lines[].price: 单价，不小于 0，最多 6 位小数
+      lines[].tax_rate: 税率，最多 4 位小数；不填时为空，提交前必须有值
+  pay_slip_delete:
+    description: |-
+      删除付款单草稿，物理删除表头与全部分录。
+      如需只改写草稿内容，请使用 pay_slip_update。
+      前置条件：单据状态为 draft。
+      副作用：删除后以该 id 调用 pay_slip_get 返回 NOT_FOUND；由费用单下推生成的草稿被删除后，相应费用单的可付金额恢复。
+      返回：删除结果，含被删除付款单的 id。
+    params:
+      id: 付款单的内部 ID，由 pay_slip_search 返回
+  pay_slip_submit:
+    description: |-
+      提交付款单，使状态由 draft 变为 submitted。
+      如需撤回提交，请使用 pay_slip_unsubmit。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含每行的数量、单价、税率）都有值。
+      副作用：只改变单据状态，不反写来源费用单。
+      返回：提交后的付款单，含表头全部字段和全部分录。
+    params:
+      id: 付款单的内部 ID，由 pay_slip_search 返回
+  pay_slip_unsubmit:
+    description: |-
+      撤回付款单的提交，使状态由 submitted 变为 draft。
+      如需审核该单据，请使用 pay_slip_approve。
+      前置条件：单据状态为 submitted。
+      副作用：只改变单据状态；回到 draft 后可以继续修改表头。
+      返回：撤回提交后的付款单，含表头全部字段和全部分录。
+    params:
+      id: 付款单的内部 ID，由 pay_slip_search 返回
+  pay_slip_approve:
+    description: |-
+      审核付款单，使状态由 submitted 变为 approved。
+      如需退回草稿，请使用 pay_slip_unapprove。
+      前置条件：单据状态为 submitted。
+      副作用：由费用单下推生成时，把本单据表头的 amount_with_tax 累加到来源费用单表头的 linked_amount；费用单没有关闭环节，不会被自动关闭。本单据没有库存联动，审核不改变即时库存。
+      返回：审核后的付款单，含表头全部字段和全部分录。
+    params:
+      id: 付款单的内部 ID，由 pay_slip_search 返回
+  pay_slip_unapprove:
+    description: |-
+      反审核付款单，使状态由 approved 变为 draft。
+      如需重新审核，请使用 pay_slip_approve。
+      前置条件：单据状态为 approved，且没有由它下推生成的下游单据。
+      副作用：从来源费用单表头的 linked_amount 中减去本单据审核时累加的金额，使该费用单的可付金额恢复。
+      返回：反审核后的付款单，含表头全部字段和全部分录。
+    params:
+      id: 付款单的内部 ID，由 pay_slip_search 返回
+
+  # ---------- 移库单：transfer 方向的库存联动，R-FXT-001 要求两仓不同 ----------
+  stock_move_search:
+    description: |-
+      按关键字、状态和业务日期范围分页检索移库单，返回单据摘要。
+      如需一张移库单的全部字段与分录，请使用 stock_move_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；不填时返回全部状态
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  stock_move_get:
+    description: |-
+      按内部 ID 获取单张移库单的表头全部字段和全部分录。
+      如需按编号、状态或业务日期范围查找移库单，请使用 stock_move_search。
+      前置条件：id 由 stock_move_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、from_depot（调出仓库）、to_depot（调入仓库）、remark，以及按 line_no 升序的分录，每项含 line_no、article、measure、move_qty 和 qty_base。
+    params:
+      id: 移库单的内部 ID，由 stock_move_search 返回
+  stock_move_draft_create:
+    description: |-
+      新建移库单草稿，把存货从一个仓库移到另一个仓库。
+      如需登记盘盈或盘亏，请使用 count_sheet_create；如需领用出库，请使用 issue_note_create。
+      前置条件：存货与仓库为启用状态，调入仓库不得与调出仓库相同。
+      副作用：只生成 draft 草稿，不改变即时库存；审核后才在调出仓库减少、调入仓库增加同样的基本单位数量，总量不变。
+      返回：新建后的移库单，含 id、number、status 和全部分录。
+    params:
+      from_depot_id: 调出仓库的内部 ID，由 depot_search 返回
+      to_depot_id: 调入仓库的内部 ID，由 depot_search 返回；不得与 from_depot_id 相同
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      remark: 备注；不填时为空
+      lines: 移库分录数组，1 到 200 个元素
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].move_qty: 移库数量，大于 0，最多 4 位小数；单位见 measure_id
+  stock_move_update:
+    description: |-
+      修改移库单草稿的表头字段与分录。
+      如需删除整张草稿，请使用 stock_move_delete。
+      前置条件：单据状态为 draft，修改后调入仓库仍不得与调出仓库相同。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；未提供的可写表头字段保持原值；不改变即时库存。
+      返回：修改后的移库单，含表头全部字段和全部分录。
+    params:
+      id: 移库单的内部 ID，由 stock_move_search 返回
+      from_depot_id: 调出仓库的内部 ID，由 depot_search 返回；不填时保持原值
+      to_depot_id: 调入仓库的内部 ID，由 depot_search 返回；不得与调出仓库相同；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 移库分录数组，1 到 200 个元素；不填时原分录保持不变
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的基本单位
+      lines[].move_qty: 移库数量，大于 0，最多 4 位小数
+  stock_move_delete:
+    description: |-
+      删除移库单草稿，物理删除表头与全部分录。
+      如需只改写草稿内容，请使用 stock_move_update。
+      前置条件：单据状态为 draft。
+      副作用：删除后以该 id 调用 stock_move_get 返回 NOT_FOUND，检索结果中也不再含该单据；已审核单据不能删除。
+      返回：删除结果，含被删除移库单的 id。
+    params:
+      id: 移库单的内部 ID，由 stock_move_search 返回
+  stock_move_submit:
+    description: |-
+      提交移库单，使状态由 draft 变为 submitted。
+      如需撤回提交，请使用 stock_move_unsubmit。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段都有值，调入仓库不得与调出仓库相同。
+      副作用：只改变单据状态，不改变即时库存。
+      返回：提交后的移库单，含表头全部字段和全部分录。
+    params:
+      id: 移库单的内部 ID，由 stock_move_search 返回
+  stock_move_unsubmit:
+    description: |-
+      撤回移库单的提交，使状态由 submitted 变为 draft。
+      如需审核该单据，请使用 stock_move_approve。
+      前置条件：单据状态为 submitted。
+      副作用：只改变单据状态，不改变即时库存；回到 draft 后可以继续修改或删除。
+      返回：撤回提交后的移库单，含表头全部字段和全部分录。
+    params:
+      id: 移库单的内部 ID，由 stock_move_search 返回
+  stock_move_approve:
+    description: |-
+      审核移库单，使状态由 submitted 变为 approved。
+      如需退回草稿，请使用 stock_move_unapprove。
+      前置条件：单据状态为 submitted；调出仓库的即时库存足以支撑本次移出。
+      副作用：为每行写两条库存流水，在调出仓库减少、在调入仓库增加同样的基本单位数量；使任一即时库存小于 0 时报错并整体回滚。
+      返回：审核后的移库单，含表头全部字段和全部分录。
+    params:
+      id: 移库单的内部 ID，由 stock_move_search 返回
+  stock_move_unapprove:
+    description: |-
+      反审核移库单，使状态由 approved 变为 draft。
+      如需重新审核，请使用 stock_move_approve。
+      前置条件：单据状态为 approved；调入仓库的即时库存足以冲回本次移入。
+      副作用：删除本单据审核时写入的库存流水，把数量加回调出仓库、从调入仓库减去；使任一即时库存小于 0 时报错并整体回滚。
+      返回：反审核后的移库单，含表头全部字段和全部分录。
+    params:
+      id: 移库单的内部 ID，由 stock_move_search 返回
+
+  # ---------- 供货订单：pricing，按数量下推收料单的来源 ----------
+  supply_order_search:
+    description: |-
+      按关键字、状态、往来单位和业务日期范围分页检索供货订单，返回单据摘要。
+      如需一张订单的全部字段与分录，请使用 supply_order_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含 id、number、status、biz_date、vendor、amount_with_tax）、total、page、page_size、has_more；按 biz_date 降序、number 降序排列，id 为最后排序键。
+    params:
+      keyword: 关键字，按包含匹配单据编号 number，ASCII 字母不区分大小写；不填或为空字符串时不按关键字过滤
+      status: 状态，draft 为草稿，submitted 为已提交，approved 为已审核，closed 为已关闭；只有 approved 的订单可以下推收料单；不填时返回全部状态
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时不按往来单位过滤
+      date_from: 业务日期范围的起始日期，YYYY-MM-DD，包含该日；不填时不限起始日期
+      date_to: 业务日期范围的截止日期，YYYY-MM-DD，包含该日；不填时不限截止日期
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20
+  supply_order_get:
+    description: |-
+      按内部 ID 获取单张供货订单的表头全部字段和全部分录。
+      如需查看某个往来单位与某个存货的历史成交单价，请使用 supply_price_query。
+      前置条件：id 由 supply_order_search 返回。
+      副作用：无，只读。
+      返回：表头的 id、number、status、biz_date、vendor、need_date、price_includes_tax 和各金额字段，以及按 line_no 升序的分录，每项含 line_no、article、measure、qty、qty_base、price、tax_rate、各金额字段和 linked_qty（已收料的基本单位数量）。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+  supply_order_create:
+    description: |-
+      新建供货订单草稿，向往来单位订购存货。
+      如需登记到货入库，请使用 goods_entry_create_from_order。
+      前置条件：往来单位、存货和计量单位为启用状态；存货的换算单位要有换算关系。
+      副作用：只生成 draft 草稿，不改变即时库存；提交并审核后才能下推收料单。
+      返回：新建后的供货订单，含 id、number、status、各金额字段和全部分录，每行附基本单位数量 qty_base。
+    params:
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回
+      need_date: 需求日期，YYYY-MM-DD
+      price_includes_tax: 单价是否含税，true 时按含税单价反算不含税金额；不填时为 false
+      biz_date: 业务日期，YYYY-MM-DD；不填时取当前业务日期，当前业务日期见 business_context_get
+      remark: 备注；不填时为空
+      lines: 订单分录数组，1 到 200 个元素
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的采购单位
+      lines[].tax_rate: 税率，最多 4 位小数；不填时取该存货的税率
+      lines[].qty: 数量，大于 0，最多 4 位小数；单位见 measure_id，按换算关系折成基本单位后用于收料额度
+      lines[].price: 单价，不小于 0，最多 6 位小数；是否含税由表头 price_includes_tax 决定
+  supply_order_update:
+    description: |-
+      修改供货订单草稿的表头字段与分录。
+      如需删除整张草稿，请使用 supply_order_delete。
+      前置条件：单据状态为 draft，id 由 supply_order_search 返回。
+      副作用：提供 lines 时整体替换原分录并从 1 起重排行号；只修改 price_includes_tax 时全部金额按新口径重算。
+      返回：修改后的供货订单，含表头全部字段和全部分录。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回；不填时保持原值
+      need_date: 需求日期，YYYY-MM-DD；不填时保持原值
+      price_includes_tax: 单价是否含税；不填时保持原值
+      biz_date: 业务日期，YYYY-MM-DD；不填时保持原值
+      remark: 备注；不填时保持原值
+      lines: 订单分录数组，1 到 200 个元素；不填时原分录保持不变
+      lines[].article_id: 存货的内部 ID，由 article_search 返回
+      lines[].measure_id: 计量单位的内部 ID，由 measure_search 返回；不填时取该存货的采购单位
+      lines[].tax_rate: 税率，最多 4 位小数；不填时取该存货的税率
+      lines[].qty: 数量，大于 0，最多 4 位小数
+      lines[].price: 单价，不小于 0，最多 6 位小数
+  supply_order_delete:
+    description: |-
+      删除供货订单草稿，物理删除表头与全部分录。
+      如需只改写草稿内容，请使用 supply_order_update。
+      前置条件：单据状态为 draft。
+      副作用：删除后以该 id 调用 supply_order_get 返回 NOT_FOUND，检索结果中也不再含该单据；已提交或已审核的订单不能删除。
+      返回：删除结果，含被删除供货订单的 id。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+  supply_order_submit:
+    description: |-
+      提交供货订单，使状态由 draft 变为 submitted。
+      如需撤回提交，请使用 supply_order_unsubmit。
+      前置条件：单据状态为 draft，至少有一个分录，表头与分录的必填字段（含每行的存货、计量单位、数量、单价、税率）都有值。
+      副作用：只改变单据状态，不改变即时库存。
+      返回：提交后的供货订单，含表头全部字段和全部分录。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+  supply_order_unsubmit:
+    description: |-
+      撤回供货订单的提交，使状态由 submitted 变为 draft。
+      如需审核该订单，请使用 supply_order_approve。
+      前置条件：单据状态为 submitted。
+      副作用：只改变单据状态；回到 draft 后可以继续修改或删除。
+      返回：撤回提交后的供货订单，含表头全部字段和全部分录。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+  supply_order_approve:
+    description: |-
+      审核供货订单，使状态由 submitted 变为 approved，之后可以按行下推收料单。
+      如需退回草稿，请使用 supply_order_unapprove。
+      前置条件：单据状态为 submitted。
+      副作用：只改变单据状态；本单据没有库存联动，审核不改变即时库存。审核后各行的可收料数量等于其基本单位数量减去 linked_qty。
+      返回：审核后的供货订单，含表头全部字段和全部分录。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+  supply_order_unapprove:
+    description: |-
+      反审核供货订单，使状态由 approved 变为 draft。
+      如需重新审核，请使用 supply_order_approve。
+      前置条件：单据状态为 approved，且没有由它下推生成的收料单（含草稿），否则报错，需要先删除那些收料单。
+      副作用：只改变单据状态；回到 draft 后可以继续修改或删除。
+      返回：反审核后的供货订单，含表头全部字段和全部分录。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+  supply_order_close:
+    description: |-
+      关闭供货订单，使状态由 approved 变为 closed，表示不再继续收料。
+      如需重新打开，请使用 supply_order_unclose。
+      前置条件：单据状态为 approved。
+      副作用：只改变单据状态，不改变即时库存与已收料数量；关闭方式记为手工关闭，关闭后不能再下推收料单。
+      返回：关闭后的供货订单，含表头全部字段和全部分录。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+  supply_order_unclose:
+    description: |-
+      反关闭供货订单，使状态由 closed 变为 approved，之后可以继续下推收料单。
+      如需再次关闭，请使用 supply_order_close。
+      前置条件：单据状态为 closed，且关闭方式为手工关闭；各行收足后自动关闭的订单不能用本工具打开。
+      副作用：只改变单据状态，不改变即时库存与已收料数量。
+      返回：反关闭后的供货订单，含表头全部字段和全部分录。
+    params:
+      id: 供货订单的内部 ID，由 supply_order_search 返回
+
+  # ---------- 下推工具：来源简称取 source_short_names（需求 11 第 13 条） ----------
+  pay_slip_create_from_fee:
+    description: |-
+      按已审核的费用单生成付款单草稿，逐行登记本次付款的数量与单价。
+      如需登记与费用单无关的付款，请使用 pay_slip_create。
+      前置条件：费用单状态为 approved，fee_id 由 fee_note_search 返回，source_line_id 属于该费用单；本单据价税合计不超过该费用单的可付金额（价税合计减已付金额）。
+      副作用：只生成 draft 草稿，不改变费用单的任何字段；审核后才把本单据的价税合计反写到费用单的 linked_amount。
+      返回：新建后的付款单，含 id、number、status、各金额字段和全部分录。
+    params:
+      fee_id: 来源费用单的内部 ID，由 fee_note_search 返回
+      lines: 付款分录数组，1 到 200 个元素；每项对应一个费用单分录，同一分录可以出现多次
+      lines[].source_line_id: 来源费用单分录的 ID，形如 `<费用单 ID>-<行号>`，由 fee_note_get 返回
+      lines[].qty: 数量，大于 0，最多 4 位小数
+      lines[].price: 单价，不小于 0，最多 6 位小数；是否含税取自费用单的 price_includes_tax
+  goods_entry_create_from_order:
+    description: |-
+      按已审核的供货订单生成收料单草稿，逐行登记本次收料的数量与仓库。
+      如需登记不经订单的直接收料，请使用 goods_entry_create。
+      前置条件：订单状态为 approved，order_id 由 supply_order_search 返回，source_line_id 属于该订单；每个订单行本次收料的基本单位数量合计不超过它的可收料数量。
+      副作用：只生成 draft 草稿，不改变订单的任何字段；审核后才增加即时库存并反写订单行的 linked_qty，订单各行收足后自动关闭。
+      返回：新建后的收料单，含 id、number、status 和全部分录。
+    params:
+      order_id: 来源供货订单的内部 ID，由 supply_order_search 返回
+      lines: 收料分录数组，1 到 200 个元素；同一订单行可以分多行收入不同仓库
+      lines[].source_line_id: 来源订单分录的 ID，形如 `<订单 ID>-<行号>`，由 supply_order_get 返回
+      lines[].entry_qty: 收料数量，大于 0，最多 4 位小数；单位取自订单行的计量单位
+      lines[].depot_id: 收料仓库的内部 ID，由 depot_search 返回
+
+  # ---------- 查询工具：声明式查询与原语查询 ----------
+  supply_price_query:
+    description: |-
+      查询某个往来单位与某个存货的最近成交单价，以及最近几次的单价记录。
+      如需订单的全部字段，请使用 supply_order_get。
+      前置条件：无。
+      副作用：无，只读。
+      返回：latest 为最近一张已审核或已关闭订单中该存货的 price、price_includes_tax、biz_date 和 number；history 为最近至多 5 次的 price、biz_date 和 number，按业务日期降序。没有成交记录时 latest 为 null，history 为空数组。
+    params:
+      vendor_id: 往来单位的内部 ID，由 vendor_search 返回
+      article_id: 存货的内部 ID，由 article_search 返回
+  stock_level_query:
+    description: |-
+      分页查询（存货，仓库）的即时库存，数量以基本单位计。
+      如需查看存货的单位换算关系，请使用 article_get；如需按关键字查找仓库，请使用 depot_search。
+      前置条件：无。
+      副作用：无，只读。
+      返回：items（每项含存货引用、仓库引用、基本单位引用和即时库存数量）、total、page、page_size、has_more；按存货 ID、再按仓库 ID 升序排列。只返回有库存记录的（存货，仓库），数量为 0 的记录同样返回。
+    params:
+      material_id: 存货的内部 ID，由 article_search 返回；不填时返回全部存货
+      warehouse_id: 仓库的内部 ID，由 depot_search 返回；不填时返回全部仓库
+      page: 页码，从 1 开始；不填时为 1
+      page_size: 每页条数，1 到 100；不填时为 20

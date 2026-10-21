@@ -1,0 +1,16 @@
+{
+  "batch_id": "AP-20260930",
+  "decisions": [
+    {"invoice_id":"I001","po_id":"PO001","receipt_ids":["R001","R002"],"amount_cents":50000,"decision":"ready_for_review","reason_code":"matched"},
+    {"invoice_id":"I002","po_id":"PO002","receipt_ids":["R003"],"amount_cents":20000,"decision":"blocked","reason_code":"quantity_exceeds_received"},
+    {"invoice_id":"I003","po_id":"PO003","receipt_ids":["R005"],"amount_cents":22000,"decision":"blocked","reason_code":"price_mismatch"},
+    {"invoice_id":"I004","po_id":"PO404","receipt_ids":[],"amount_cents":10000,"decision":"blocked","reason_code":"missing_po"},
+    {"invoice_id":"I005","po_id":"PO004","receipt_ids":["R006"],"amount_cents":30000,"decision":"blocked","reason_code":"po_not_approved"},
+    {"invoice_id":"I006","po_id":"PO001","receipt_ids":["R001","R002"],"amount_cents":50000,"decision":"blocked","reason_code":"duplicate_invoice"},
+    {"invoice_id":"I007","po_id":"PO005","receipt_ids":["R007"],"amount_cents":1200000,"decision":"needs_approval","reason_code":"amount_requires_approval"},
+    {"invoice_id":"I008","po_id":"PO006","receipt_ids":["R008"],"amount_cents":1000000,"decision":"ready_for_review","reason_code":"matched"},
+    {"invoice_id":"I009","po_id":"PO007","receipt_ids":["R009"],"amount_cents":5000,"decision":"blocked","reason_code":"supplier_mismatch"}
+  ],
+  "summary": {"invoice_count":9,"ready_count":2,"approval_count":1,"blocked_count":6,"ready_amount_cents":1050000,"approval_amount_cents":1200000},
+  "payments": []
+}

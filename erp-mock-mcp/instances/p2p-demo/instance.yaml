@@ -1,0 +1,38 @@
+# p2p-demo：示例实例配置，M0 版（business-pack.md 第 8 节，需求 21 第 2 条）。
+# 一个服务进程只加载一个实例配置，它决定服务哪些业务包、暴露哪个工具面、从哪个初始数据集
+# 创建沙箱，以及沙箱的锚点日期怎么来。
+#
+# packs 依次为 core、purchase、inventory，每个都固定到具体版本，不写版本范围（需求 2 第 3 条）。
+# 这个顺序同时是三件事的顺序：加载校验报错的排序、tools/list 的输出顺序（需求 11 第 9 条）和
+# 初始数据集创建共享基础数据的顺序（需求 20 第 17 条）。依赖关系由各包的 depends_on 声明，
+# purchase 与 inventory 都依赖 core，所以 core 排在最前（需求 2 第 5 条）。
+#
+# profiles 只有 semantic，datasets 只有 purchase-basic，二者即 default_profile 与
+# default_dataset：客户端连 /mcp 而不指定 profile 或 dataset 时用的就是它们（需求 15 第 1 条）。
+#
+# current_user 是当前用户，写内部 ID，不按别名或编码解析（需求 20 第 16 条）。emp_000001 是
+# core 共享数据中的第一个员工（packs/core/seed/shared/03-employee.yaml 的第一条）：构建从计数器
+# 为 0 的空库开始，共享基础数据最先创建，所以它的内部 ID 是确定的。purchase-basic 自己没有写
+# current_user，取的就是这里的值（需求 20 第 5 条）；它是采购申请单 applicant_id 的
+# default_context user 缺省值，也是 business_context_get 返回的 user。
+#
+# clock.mode 为 today：锚点日期在沙箱创建时读一次系统时间，取 Asia/Shanghai 时区的当天日期
+# （需求 16 第 1 条），这样模型看到的业务日期与客户端告诉它的"今天"一致。因此本文件没有
+# anchor_date：需要逐字节复现时，由 Admin API 的 anchor_date、stdio 与 validate 的
+# --anchor-date 为单次运行指定（需求 16 第 1 条）。数据集里的日期一律写成相对表达式，
+# 2000-01-01 到 2099-12-31 的任意锚点日期都能构建成功（需求 21 第 12 条）。
+instance: p2p-demo
+version: 1.0.0
+title: { zh: 采购到付款示例, en: Procure to pay example }
+packs:
+  core: 1.0.0
+  purchase: 1.0.0
+  inventory: 1.0.0
+profiles: [semantic]
+default_profile: semantic
+datasets: [purchase-basic]
+default_dataset: purchase-basic
+current_user: emp_000001
+clock:
+  mode: today
+  timezone: Asia/Shanghai

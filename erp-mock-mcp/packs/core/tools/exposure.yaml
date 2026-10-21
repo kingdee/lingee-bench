@@ -1,0 +1,10 @@
+# 工具暴露（tool-design.md 第 2 节）：本包按各实体的 operations 生成 7 个工具
+#   department_search、employee_search、material_search、material_get、
+#   supplier_search、supplier_get、warehouse_search
+# （顺序按 entities/ 的文件路径，需求 11 第 9 条）。
+#
+# department_search 与 employee_search 不在 example-p2p.md 第 9 节的 M0 工具清单中，
+# 用 exclude 去掉（需求 21 第 4 条）；配置本身保留，供领域层、初始数据集构建和测试使用。
+# 没有 rename，也没有查询工具：M0 的两个查询工具分别属于 purchase 与 inventory 包。
+pack: core
+exclude: [department_search, employee_search]

@@ -1,0 +1,16 @@
+# 实体生成器（设计文档数据模型 1）：键为 `<实体>.<字段>`，值为内置生成器及其参数。
+# 数据集的 bulk 批量生成记录时，这里绑定了生成器的字段取生成值，其余字段取缺省值
+# （需求 20 第 4 条）；写死的字段值不取随机数。
+# fx-basic 的 bulk 只生成 vendor，它的全部可写字段都在这里绑定。article 与 measure_link
+# 的绑定使夹具覆盖全部 7 个内置生成器，fx-basic 不用到它们：存货的 base_measure_id 既没有
+# 缺省值也无法由生成器填充，所以存货与单位换算只在数据集的 entities 中显式声明。
+generators:
+  article.name: { gen: code_words, words: [六角螺栓, 平垫圈, 弹性挡圈, 深沟轴承, 密封环] }
+  article.spec: { gen: code_words, words: [M6X30, M8X40, M10X50, 20MM, 35MM] }
+  article.grade: { gen: choice, values: [plain, fine] }
+  measure_link.ratio: { gen: decimal_range, min: "2", max: "24" }
+  vendor.name: { gen: company_name, industry: 机械 }
+  vendor.short_name: { gen: short_name }
+  vendor.contact: { gen: person_name }
+  vendor.pay_days: { gen: int_range, min: 15, max: 60 }
+  vendor.default_tax_rate: { gen: choice, values: ["0", "0.06", "0.09", "0.13"] }

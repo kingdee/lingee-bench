@@ -1,0 +1,43 @@
+# purchase：示例业务包的采购主线（docs/packs/example-p2p.md 第 4、5、6、7 节）。
+# 三张单据（采购申请单、采购订单、采购入库单）、两个下推与各自的反写、采购入库单的库存联动、
+# 包级规则 R-PUR-001 和采购价格查询。基础资料全部取自 core，所以 depends_on 只有它。
+#
+# primitives 列出本包配置实际使用的 M0 原语（需求 21 第 1 条，判定方式见需求 2 第 6 条）：
+#   crud、numbering —— 每个 bill 都使用；
+#   state_machine   —— 三张单据都声明了状态机；
+#   pricing         —— 采购订单与采购入库单的 pricing 为 true；
+#   unit_conversion —— 三张单据的分录都声明了数量语义（需求 1 第 4 条）；
+#   conversion、writeback —— conversions/ 与 writebacks/ 下的配置；
+#   inventory       —— linkages/purchase_receipt_inventory.yaml；
+#   rule_expr       —— enforced 规则 R-PUR-001 的 check，以及 purchase_price_query 的 filter。
+# 也就是 M0 的全部九个原语，与 example-p2p.md 第 2 节为 purchase 列出的原语一致
+# （那里只列 L2 原语，L1 的 crud、numbering、unit_conversion 由 core 一行带过）。
+#
+# description_variants 只含 zh-detailed：M0 的 profile 只能取这一个变体（需求 2 第 13 条）。
+pack: purchase
+version: 1.0.0
+title: { zh: 采购, en: Purchasing }
+requires_meta_model: ">=0.1.0 <1.0.0"
+depends_on:
+  core: ">=1.0.0 <2.0.0"
+primitives:
+  [
+    crud,
+    numbering,
+    pricing,
+    unit_conversion,
+    state_machine,
+    conversion,
+    writeback,
+    inventory,
+    rule_expr,
+  ]
+rule_prefix: PUR
+id_prefixes: [preq, po, prcv]
+number_prefixes: [CGSQ, CGDD, CGRK]
+# 本包的工具名都以 purchase_ 开头，下推工具与查询工具也一样
+# （purchase_order_create_from_requisition、purchase_price_query）。
+tool_prefixes: [purchase_]
+description_variants: [zh-detailed]
+license: Apache-2.0
+maintainers: ["ERP-Mock-MCP 维护者"]

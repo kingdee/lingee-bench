@@ -1,0 +1,17 @@
+# 用户上下文实体：当前用户是它的一条记录（需求 1 第 8 条），duty 供 context.user.duty 使用。
+entity: operator
+label: { zh: 操作员, en: Operator }
+id_prefix: opr
+shared: true
+context: { role: user }
+fields:
+  code:      { type: string, label: { zh: 编码, en: Code }, required: true, unique: true }
+  name:      { type: string, label: { zh: 姓名, en: Name }, required: true }
+  branch_id: { type: ref, ref: branch, label: { zh: 所属组织, en: Branch }, required: true }
+  duty:
+    type: enum
+    label: { zh: 岗位, en: Duty }
+    required: true
+    values:
+      buyer:  { zh: 采购员, en: Buyer }
+      keeper: { zh: 库管员, en: Keeper }

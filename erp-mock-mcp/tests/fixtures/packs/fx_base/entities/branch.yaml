@@ -1,0 +1,10 @@
+# 组织上下文实体：is_primary 为 true 的记录是缺省组织（需求 1 第 8 条）。
+entity: branch
+label: { zh: 核算组织, en: Branch }
+id_prefix: br
+shared: true
+context: { role: org, default_flag: is_primary }
+fields:
+  code:       { type: string, label: { zh: 编码, en: Code }, required: true, unique: true }
+  name:       { type: string, label: { zh: 名称, en: Name }, required: true }
+  is_primary: { type: bool, label: { zh: 缺省组织, en: Primary }, default: false }

@@ -1,0 +1,12 @@
+# 计量单位：编码由共享数据写定（如 PCS、BOX），不声明 code 生成规则。
+entity: measure
+label: { zh: 计量单位, en: Measure }
+id_prefix: msr
+shared: true
+operations: [search]
+search:
+  keyword_fields: [code, name]
+  default_sort: [code]
+fields:
+  code: { type: string, label: { zh: 编码, en: Code }, required: true, unique: true }
+  name: { type: string, label: { zh: 名称, en: Name }, required: true }

@@ -1,0 +1,20 @@
+# 采购入库单审核时反写采购订单（需求 21 第 11 条）：on 为 approve，reverse_on 为 unapprove，
+# target 为 source_line.linked_qty，op 为 add，value 为 line.qty_base，
+# auto_close_source_when 为 all_lines_linked。这是 meta-model.md 第 7 节的反写示例。
+#
+# 每个入库分录的基本单位数量累加到它 source_line_id 所指订单行的 linked_qty（需求 8 第 8 条），
+# 也就是 purchase_order_get 返回的"已入库数量"。
+#
+# auto_close_source_when 为 all_lines_linked：反写后订单每个分录的 linked_qty 都不小于该分录的
+# qty_base 时，订单自动转为 closed，关闭方式记为自动（需求 8 第 13 条）。
+# 反审核入库单时逆向反写，订单因此不再满足关闭条件时从 closed 回到 approved；手工 close 的订单
+# 保持 closed（需求 8 第 14 条）。自动关闭的订单不能用 unclose 打开（需求 7 第 9 条）。
+writeback:
+  id: receipt_approve_writeback_order
+  conversion: purchase_order_to_receipt
+  on: approve
+  target: source_line.linked_qty
+  op: add
+  value: line.qty_base
+  reverse_on: unapprove
+  auto_close_source_when: all_lines_linked

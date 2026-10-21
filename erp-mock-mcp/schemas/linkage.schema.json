@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "linkage.schema.json",
+  "$defs": {
+    "AdjustDef": {
+      "additionalProperties": false,
+      "description": "``adjust``: which values of a header enum field increase and which decrease stock.\n\nDeclared by an adjust linkage (requirement 9.2 and 9.3). Step 5 checks that ``field``\nis a required enum field of the header and that ``increase`` and ``decrease`` partition\nits values.",
+      "properties": {
+        "field": {
+          "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+          "title": "Field",
+          "type": "string"
+        },
+        "increase": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Increase",
+          "type": "array"
+        },
+        "decrease": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Decrease",
+          "type": "array"
+        }
+      },
+      "required": [
+        "field",
+        "increase",
+        "decrease"
+      ],
+      "title": "AdjustDef",
+      "type": "object"
+    },
+    "InventoryLinkageDef": {
+      "additionalProperties": false,
+      "description": "A linkage whose primitive is inventory (meta-model.md section 8, requirement 9).\n\n``direction`` decides which warehouse fields apply: ``warehouse_field`` for in, out and\nadjust, ``from_warehouse_field`` and ``to_warehouse_field`` for transfer, and ``adjust``\nfor adjust. All four are optional here and checked against the direction at step 5\n(requirement 9.3); ``qty_field`` must be the lines' ``qty_base`` (requirement 9.11).\nM0 implements no other linkage primitive, so any other value of ``primitive`` is a\nstep 4 error (requirement 2.6).",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "bill": {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Bill",
+          "type": "string"
+        },
+        "primitive": {
+          "const": "inventory",
+          "title": "Primitive",
+          "type": "string"
+        },
+        "on": {
+          "const": "approve",
+          "title": "On",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "in",
+            "out",
+            "transfer",
+            "adjust"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "warehouse_field": {
+          "anyOf": [
+            {
+              "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Warehouse Field"
+        },
+        "from_warehouse_field": {
+          "anyOf": [
+            {
+              "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From Warehouse Field"
+        },
+        "to_warehouse_field": {
+          "anyOf": [
+            {
+              "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To Warehouse Field"
+        },
+        "qty_field": {
+          "pattern": "^(?:header|line)\\.[a-z][a-z0-9_]*$",
+          "title": "Qty Field",
+          "type": "string"
+        },
+        "adjust": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdjustDef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "bill",
+        "primitive",
+        "on",
+        "direction",
+        "qty_field"
+      ],
+      "title": "InventoryLinkageDef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``linkages/<id>.yaml``: one linkage under the key ``linkage``.",
+  "properties": {
+    "linkage": {
+      "$ref": "#/$defs/InventoryLinkageDef"
+    }
+  },
+  "required": [
+    "linkage"
+  ],
+  "title": "LinkageFile",
+  "type": "object"
+}

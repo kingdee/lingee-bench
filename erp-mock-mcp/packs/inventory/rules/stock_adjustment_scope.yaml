@@ -1,0 +1,16 @@
+# R-INV-002（需求 21 第 6 条）：enforcement 为 described，引擎不拦截。
+#
+# 这类规则靠描述传达：description.zh 必须原样出现在 applies_to_tools 所列每个工具的
+# zh-detailed 工具描述里——全文作为连续子串逐字符出现，区分大小写，不忽略空白、标点与全角
+# 半角差异（需求 3 第 6 条）。文本见 tools/descriptions/zh-detailed.yaml 中
+# stock_adjustment_create 描述的第二行。
+#
+# applies_to_tools 只能写本包生成且未被 exclude 去掉的工具名（需求 3 第 8 条），所以这里是
+# stock_adjustment_create 而不是被 exclude 的 submit 或 approve。
+#
+# 与它对应的 R-INV-001（调拨的调出仓与调入仓不得相同）属于调拨单，不在 M0 范围内（需求 21 第 4 条）。
+rule:
+  id: R-INV-002
+  enforcement: described
+  description: { zh: 库存调整单只用于盘点差异，采购到货必须通过采购入库单入库 }
+  applies_to_tools: [stock_adjustment_create]

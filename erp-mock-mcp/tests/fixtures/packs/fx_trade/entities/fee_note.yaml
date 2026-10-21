@@ -1,0 +1,21 @@
+# simple 状态机（只有 draft 与 approved，不声明 submit、unsubmit、close、unclose，
+# 需求 7 第 11 条）、启用 pricing 但不声明数量语义的单据，是按金额下推付款单的来源，
+# 反写其表头 linked_amount。
+bill: fee_note
+label: { zh: 费用单, en: Fee note }
+id_prefix: fn
+number: { prefix: FEE }
+state_machine: simple
+pricing: true
+partner: { field: vendor_id }
+operations: [search, get, create, update, delete, approve, unapprove]
+header:
+  vendor_id: { type: ref, ref: vendor, label: { zh: 往来单位, en: Vendor }, required: true }
+  due_date:  { type: date, label: { zh: 到期日, en: Due date }, required: true }
+lines:
+  item_text: { type: string, label: { zh: 费用项目, en: Item }, required: true }
+  tax_rate:  { label: { zh: 税率, en: Tax rate }, default: "0.06" }
+search:
+  keyword_fields: [number]
+  filters: [status, vendor_id, biz_date]
+  default_sort: [biz_date desc, number desc]

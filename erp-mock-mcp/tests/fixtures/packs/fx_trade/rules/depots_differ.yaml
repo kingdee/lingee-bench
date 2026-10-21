@@ -1,0 +1,11 @@
+# enforced 规则：引擎在 on 所列操作后对 check 求值，不满足时返回 error_code 与本编号
+# （需求 10 第 7 条）。
+rule:
+  id: R-FXT-001
+  bill: stock_move
+  enforcement: enforced
+  on: [create, update, submit]
+  check: "header.from_depot_id != header.to_depot_id"
+  error_code: VALIDATION_FAILED
+  field: to_depot_id
+  message: { zh: 调入仓库不得与调出仓库相同, en: The receiving depot must differ from the issuing depot }

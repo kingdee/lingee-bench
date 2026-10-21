@@ -1,0 +1,9 @@
+[
+  {"po_id":"PO001","supplier_id":"S01","quantity":10,"unit_price_cents":5000,"approval_status":"approved"},
+  {"po_id":"PO002","supplier_id":"S02","quantity":10,"unit_price_cents":2000,"approval_status":"approved"},
+  {"po_id":"PO003","supplier_id":"S03","quantity":2,"unit_price_cents":10000,"approval_status":"approved"},
+  {"po_id":"PO004","supplier_id":"S04","quantity":1,"unit_price_cents":30000,"approval_status":"pending"},
+  {"po_id":"PO005","supplier_id":"S05","quantity":12,"unit_price_cents":100000,"approval_status":"approved"},
+  {"po_id":"PO006","supplier_id":"S06","quantity":10,"unit_price_cents":100000,"approval_status":"approved"},
+  {"po_id":"PO007","supplier_id":"S07","quantity":1,"unit_price_cents":5000,"approval_status":"approved"}
+]

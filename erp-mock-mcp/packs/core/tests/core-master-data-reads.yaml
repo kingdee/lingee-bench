@@ -1,0 +1,109 @@
+# 包级测试用例（需求 21 第 9 条）：core 的五个工具都是只读工具，本包没有 enforced 规则、
+# 下推、反写和联动，所以这里回放的是检索与详情本身。
+#
+# setup 建的是业务数据：两个供应商（一个启用、一个停用）、一个采购单位与基本单位不同的物料，
+# 以及它的换算关系。共享基础数据（组织、部门、员工、计量单位、仓库）由数据集的 include_shared
+# 引入，不必在这里写（需求 20 第 17 条）。
+#
+# 编码由引擎按创建顺序生成：供应商依次为 S0001、S0002，物料为 M00001；共享数据的仓库依次为
+# WH01、WH02、WH03，其中 WH03 已停用。计量单位按编码引用，PCS 为基本单位、BOX 为换算单位。
+#
+# 每一步之后执行器都检查 INV-1、INV-2、INV-3、INV-6，setup 里的名称也会与本包全部描述比对
+# （需求 3 第 5 条），所以这里的名称都带"用例专用"。
+case: core-master-data-reads
+setup:
+  supplier:main:
+    kind: supplier
+    name: 用例专用轴承供应商
+    short_name: 用例轴承
+    payment_term_days: 45
+    default_tax_rate: "0.09"
+  supplier:stopped:
+    kind: supplier
+    name: 用例专用停用供应商
+    short_name: 用例停用
+    status: disabled
+  material:boxed:
+    kind: material
+    name: 用例专用滚针轴承
+    spec: 用例规格 D20
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: BOX
+    tax_rate: "0.13"
+    standard_cost: "3.60"
+  unit_conversion:boxed:
+    kind: unit_conversion
+    material: "material:boxed"
+    from_unit: BOX
+    factor: "12"
+steps:
+  # 关键字按包含匹配 code、name、short_name：只命中启用的那一个供应商。
+  - call: supplier_search
+    args: { keyword: 用例专用轴承 }
+    expect:
+      result:
+        total: 1
+        page: 1
+        page_size: 20
+        has_more: false
+        items:
+          - { id: sup_000001, code: S0001, status: enabled, short_name: 用例轴承 }
+  # status 过滤：停用的供应商只有第二条，R-GEN-006 不许它进入新单据。
+  - call: supplier_search
+    args: { status: disabled }
+    expect:
+      result:
+        total: 1
+        items:
+          - { id: sup_000002, code: S0002, status: disabled }
+  # 详情：账期天数与缺省税率只在 get 里返回，摘要里没有。
+  - call: supplier_get
+    args: { id: "$supplier:main" }
+    expect:
+      result:
+        id: sup_000001
+        code: S0001
+        status: enabled
+        payment_term_days: 45
+        default_tax_rate: "0.09"
+  # 物料类型过滤，摘要含规格型号与类型。
+  - call: material_search
+    args: { kind: raw, status: enabled }
+    expect:
+      result:
+        total: 1
+        items:
+          - { id: mat_000001, code: M00001, status: enabled, spec: 用例规格 D20, kind: raw }
+  # 详情：基本单位、采购单位、税率与全部换算关系，1 BOX 折合 12 PCS。
+  - call: material_get
+    args: { id: "$material:boxed" }
+    expect:
+      result:
+        id: mat_000001
+        code: M00001
+        kind: raw
+        base_unit: { id: unit_000001, code: PCS }
+        purchase_unit: { id: unit_000002, code: BOX }
+        tax_rate: "0.13"
+        standard_cost: "3.60"
+        unit_conversions:
+          - { from_unit: { id: unit_000002, code: BOX }, factor: "12" }
+  # 共享数据里的三个仓库，按 code 升序；停用的那一个只在不过滤状态时出现。
+  - call: warehouse_search
+    args: { status: enabled }
+    expect:
+      result:
+        total: 2
+        items:
+          - { id: wh_000001, code: WH01, status: enabled }
+          - { id: wh_000002, code: WH02, status: enabled }
+  - call: warehouse_search
+    args: {}
+    expect:
+      result:
+        total: 3
+        items:
+          - { id: wh_000001, code: WH01, status: enabled }
+          - { id: wh_000002, code: WH02, status: enabled }
+          - { id: wh_000003, code: WH03, status: disabled }

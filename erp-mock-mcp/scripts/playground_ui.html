@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ERP-Mock-MCP 调试台</title>
+<!-- 内联 favicon，省掉浏览器对 /favicon.ico 的那次 404。 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%234da3ff'/%3E%3Cpath d='M4 11.5 7 4.5h2l3 7h-1.9l-.6-1.5H6.5L5.9 11.5z' fill='%2307121f'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #11151c;
+    --panel: #181d26;
+    --panel-2: #1f2530;
+    --line: #2c3442;
+    --text: #dde3ec;
+    --muted: #8b96a8;
+    --accent: #4da3ff;
+    --ok: #4ec98b;
+    --err: #ff6b6b;
+    --warn: #e6b450;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex; flex-direction: column;
+  }
+  a { color: var(--accent); }
+  button, select, input, textarea {
+    font-family: inherit; font-size: 13px; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
+    padding: 5px 8px;
+  }
+  button { cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #07121f; font-weight: 600; }
+  button.danger:hover { border-color: var(--err); color: var(--err); }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  textarea { font-family: var(--mono); resize: vertical; width: 100%; }
+  code, pre { font-family: var(--mono); }
+  pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+
+  header { border-bottom: 1px solid var(--line); background: var(--panel); flex: none; }
+  .bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-wrap: wrap; }
+  .bar + .bar { border-top: 1px solid var(--line); }
+  .title { font-weight: 700; letter-spacing: .3px; margin-right: 4px; }
+  .grow { flex: 1 1 auto; }
+  .tag {
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px;
+    white-space: nowrap;
+  }
+  .tag b { color: var(--text); font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.on { background: var(--ok); }
+  .dot.off { background: var(--err); }
+
+  main { flex: 1 1 auto; display: grid; grid-template-columns: 280px minmax(360px, 1fr) minmax(400px, 1.1fr); min-height: 0; }
+  main > section, main > aside { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  main > aside, main > section:first-of-type { border-right: 1px solid var(--line); }
+
+  .pane-head {
+    flex: none; padding: 8px 12px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; background: var(--panel);
+  }
+  .pane-body { flex: 1 1 auto; overflow: auto; padding: 12px; }
+  .pane-body.flush { padding: 0; }
+
+  .tool-list { list-style: none; margin: 0; padding: 0; }
+  .tool-list li { border-bottom: 1px solid var(--line); }
+  .tool-list button {
+    display: block; width: 100%; text-align: left; border: 0; border-radius: 0;
+    background: transparent; padding: 7px 12px;
+  }
+  .tool-list button:hover { background: var(--panel-2); }
+  .tool-list button[aria-current="true"] { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+  .tool-name { font-family: var(--mono); font-size: 12.5px; }
+  .tool-sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ro { color: var(--ok); font-size: 10.5px; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; margin-left: 5px; }
+
+  .desc { color: var(--muted); white-space: pre-wrap; margin: 0 0 12px; font-size: 12.5px; }
+  .field { margin-bottom: 11px; }
+  .field > label, .field > .flabel { display: block; margin-bottom: 3px; }
+  .fname { font-family: var(--mono); font-size: 12.5px; }
+  .ftype { color: var(--muted); font-size: 11px; margin-left: 6px; }
+  .req { color: var(--warn); margin-left: 3px; }
+  .fhint { color: var(--muted); font-size: 11.5px; margin-top: 3px; white-space: pre-wrap; }
+  .field input[type=text], .field input[type=date], .field select, .field textarea { width: 100%; }
+
+  .rows { border: 1px solid var(--line); border-radius: 5px; padding: 8px; background: #141922; }
+  .row { border: 1px solid var(--line); border-radius: 5px; padding: 8px; margin-bottom: 8px; background: var(--panel-2); }
+  .row-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .row-head .idx { color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { border-radius: 5px 5px 0 0; border-bottom-color: transparent; background: transparent; }
+  .tabs button[aria-selected="true"] { background: var(--panel-2); border-color: var(--line); color: var(--text); }
+  .hidden { display: none !important; }
+
+  .kv { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .block { margin-bottom: 14px; }
+  .block > h3 {
+    margin: 0 0 5px; font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .json {
+    background: #0e1319; border: 1px solid var(--line); border-radius: 5px;
+    padding: 9px 11px; font-size: 12.5px; max-height: 60vh; overflow: auto;
+  }
+  .j-key { color: #7fd1ff; }
+  .j-str { color: #a8e6a1; }
+  .j-num { color: #e8c07d; }
+  .j-bool { color: #d58cf5; }
+  .j-null { color: var(--muted); }
+
+  .banner { border-radius: 5px; padding: 8px 10px; margin-bottom: 12px; border: 1px solid; }
+  .banner.err { border-color: var(--err); background: rgba(255,107,107,.08); }
+  .banner.ok { border-color: var(--ok); background: rgba(78,201,139,.08); }
+  .banner.warn { border-color: var(--warn); background: rgba(230,180,80,.08); }
+  .banner pre { margin-top: 6px; font-size: 11.5px; max-height: 240px; overflow: auto; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 5px 7px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+  tbody tr.clickable:hover { background: var(--panel-2); cursor: pointer; }
+  td.mono, th.mono { font-family: var(--mono); }
+  .is-err { color: var(--err); }
+  .is-ok { color: var(--ok); }
+  .muted { color: var(--muted); }
+  details > summary { cursor: pointer; color: var(--muted); }
+  .inline-note { color: var(--muted); font-size: 11.5px; }
+  .chk { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
+  /* aria-live 区域要留在渲染树里，display:none 的内容读屏软件不播报。 */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <span class="title">ERP-Mock-MCP 调试台</span>
+    <span class="dot" id="dot" role="img" aria-label="服务状态"></span>
+    <label class="inline-note" for="instance">实例</label>
+    <select id="instance" style="max-width:300px" title="切换实例配置目录，换一个会重启 serve"></select>
+    <button id="reload" title="重启 serve 子进程，重新做一次加载校验">重新加载</button>
+    <span class="grow"></span>
+    <span class="tag" id="versions"></span>
+  </div>
+  <div class="bar">
+    <span class="tag" id="sandbox-tag">沙箱 —</span>
+    <span class="tag" id="profile-tag">profile —</span>
+    <span class="tag" id="dataset-tag">数据集 —</span>
+    <span class="tag" id="anchor-tag">锚点 —</span>
+    <span class="grow"></span>
+    <select id="new-profile" title="新沙箱的 profile"></select>
+    <select id="new-dataset" title="新沙箱的初始数据集"></select>
+    <input type="date" id="new-anchor" title="新沙箱的锚点日期，留空按实例的 clock">
+    <button id="new-sandbox">新建沙箱</button>
+    <button id="reset-sandbox" class="danger" title="恢复到初始数据集，调用计数归零">重置</button>
+    <button id="save-snapshot" title="把当前状态存成命名快照">存快照</button>
+    <select id="snapshot-list" title="命名快照"><option value="">（无快照）</option></select>
+    <button id="restore-snapshot">恢复</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="pane-head">
+      <input type="search" id="tool-search" placeholder="搜索工具名或描述" aria-label="搜索工具" style="flex:1">
+      <span class="tag" id="tool-count">0</span>
+    </div>
+    <div class="pane-body flush"><ul class="tool-list" id="tool-list"></ul></div>
+  </aside>
+
+  <section>
+    <div class="pane-head">
+      <strong class="fname" id="tool-title">选一个工具</strong>
+      <span class="grow"></span>
+      <div class="tabs" role="tablist" aria-label="入参编辑方式">
+        <button role="tab" id="tab-form" aria-selected="true" aria-controls="pane-form">表单</button>
+        <button role="tab" id="tab-json" aria-selected="false" aria-controls="pane-json">JSON</button>
+      </div>
+    </div>
+    <div class="pane-body" id="editor">
+      <p class="desc" id="tool-desc">左侧选一个工具，这里会按它的 inputSchema 生成表单。</p>
+
+      <div id="pane-form" role="tabpanel" aria-labelledby="tab-form"></div>
+
+      <div id="pane-json" role="tabpanel" aria-labelledby="tab-json" class="hidden">
+        <div class="field">
+          <label class="flabel" for="json-args"><span class="fname">arguments</span>
+            <span class="ftype">完整入参对象，直接发给 tools/call</span></label>
+          <textarea id="json-args" rows="16" spellcheck="false">{}</textarea>
+          <div class="fhint">这里能发任何东西，包括故意写错的类型与不存在的字段，看服务端真实的 VALIDATION_FAILED。</div>
+        </div>
+        <div class="bar" style="padding:0;gap:6px">
+          <button id="from-form">按表单填充</button>
+          <button id="from-schema">按 schema 生成模板</button>
+          <button id="fmt-json">格式化</button>
+        </div>
+      </div>
+
+      <div class="bar" style="padding:12px 0 0;gap:8px;border-top:1px solid var(--line);margin-top:12px">
+        <button class="primary" id="run" disabled>调用（⌘/Ctrl + Enter）</button>
+        <label class="chk" title="数值按十进制字符串发送可避免浮点误差，服务端会把它们标进 trace 的 coerced">
+          <input type="checkbox" id="as-string" checked> 数值按字符串发送
+        </label>
+        <span class="grow"></span>
+        <span class="inline-note">空输入不发送该参数</span>
+      </div>
+
+      <details class="block" id="schema-box" style="margin-top:14px">
+        <summary>schema</summary>
+        <div class="block" style="margin-top:8px">
+          <h3>inputSchema</h3><pre class="json" id="input-schema"></pre>
+        </div>
+        <div class="block">
+          <h3>outputSchema</h3><pre class="json" id="output-schema"></pre>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <div class="pane-head">
+      <div class="tabs" role="tablist" aria-label="输出面板">
+        <button role="tab" id="tab-result" aria-selected="true" aria-controls="pane-result">出参</button>
+        <button role="tab" id="tab-trace" aria-selected="false" aria-controls="pane-trace">Trace</button>
+        <button role="tab" id="tab-diff" aria-selected="false" aria-controls="pane-diff">Diff</button>
+        <button role="tab" id="tab-history" aria-selected="false" aria-controls="pane-history">历史</button>
+        <button role="tab" id="tab-log" aria-selected="false" aria-controls="pane-log">日志</button>
+      </div>
+      <span class="grow"></span>
+      <span class="tag" id="timing"></span>
+    </div>
+    <div class="pane-body" id="out">
+      <div id="pane-result" role="tabpanel" aria-labelledby="tab-result">
+        <p class="muted" id="result-empty">还没有调用。选工具、填参、点「调用」。</p>
+        <div id="result-body" class="hidden"></div>
+      </div>
+      <div id="pane-trace" role="tabpanel" aria-labelledby="tab-trace" class="hidden"></div>
+      <div id="pane-diff" role="tabpanel" aria-labelledby="tab-diff" class="hidden"></div>
+      <div id="pane-history" role="tabpanel" aria-labelledby="tab-history" class="hidden"></div>
+      <div id="pane-log" role="tabpanel" aria-labelledby="tab-log" class="hidden"></div>
+    </div>
+  </section>
+</main>
+
+<div aria-live="polite" class="sr-only" id="live"></div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------- 工具函数 ---------- */
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[ch]);
+}
+
+// JSON 着色。只在字符串字面量这一支里做 HTML 转义，这是完备的：JSON.stringify 的输出里
+// 字面量之外只有 {}[],: 、空白、数字与 true/false/null，没有 < > & " 这些需要转义的字符。
+// 反过来先整体转义再上色是错的——引号变成 &quot; 之后字符串就匹配不上了，而 &#39; 里的数字
+// 还会被当成数值上色。
+function jsonHtml(value) {
+  if (value === undefined) return '<span class="j-null">（无）</span>';
+  let text;
+  try { text = JSON.stringify(value, null, 2); }
+  catch (error) { return `<span class="j-null">（无法序列化：${escapeHtml(error.message)}）</span>`; }
+  if (text === undefined) return '<span class="j-null">（无）</span>';
+  return text.replace(
+    /("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g,
+    (match, str, colon) => {
+      if (str !== undefined) {
+        const safe = escapeHtml(str);
+        return colon
+          ? `<span class="j-key">${safe}</span>${colon}`
+          : `<span class="j-str">${safe}</span>`;
+      }
+      if (match === "null") return '<span class="j-null">null</span>';
+      if (match === "true" || match === "false") return `<span class="j-bool">${match}</span>`;
+      return `<span class="j-num">${match}</span>`;
+    },
+  );
+}
+
+function announce(message) {
+  const live = $("live");
+  live.textContent = message;
+}
+
+async function api(path, options) {
+  const response = await fetch(path, options);
+  let payload = null;
+  try { payload = await response.json(); } catch (_) { payload = null; }
+  if (!response.ok) {
+    const error = new Error((payload && payload.error) || `${response.status} ${response.statusText}`);
+    error.detail = (payload && payload.detail) || "";
+    throw error;
+  }
+  return payload;
+}
+
+function post(path, body) {
+  return api(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body || {}),
+  });
+}
+
+function banner(kind, message, detail) {
+  const extra = detail ? `<pre>${escapeHtml(detail)}</pre>` : "";
+  return `<div class="banner ${kind}"><strong>${escapeHtml(message)}</strong>${extra}</div>`;
+}
+
+/* ---------- 应用状态 ---------- */
+
+const app = {
+  state: null,
+  tools: [],
+  current: null,       // 当前选中的工具定义
+  lastCall: null,      // 最近一次调用的结果
+  mode: "form",        // form | json
+  busy: false,
+};
+
+function setBusy(busy) {
+  app.busy = busy;
+  for (const id of ["reload", "run", "new-sandbox", "reset-sandbox", "save-snapshot", "restore-snapshot"]) {
+    const node = $(id);
+    if (id === "run") node.disabled = busy || !app.current || !app.state || !app.state.sandbox;
+    else node.disabled = busy;
+  }
+}
+
+async function guard(label, work) {
+  if (app.busy) return;
+  setBusy(true);
+  announce(`${label}…`);
+  try {
+    await work();
+  } catch (error) {
+    showError(label + "失败：" + error.message, error.detail);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function showError(message, detail) {
+  selectOutTab("tab-result");
+  $("result-empty").classList.add("hidden");
+  const body = $("result-body");
+  body.classList.remove("hidden");
+  body.innerHTML = banner("err", message, detail);
+  announce(message);
+}
+
+/* ---------- 顶部状态 ---------- */
+
+// 重填一个下拉框。用户已经选中的值只要还在选项里就保留，否则用 fallback：状态每次操作后都会
+// 重新渲染，不保留的话刚挑好的快照名会在存快照之后被清掉。
+// items 可以是字符串数组，也可以是 {path, label} 这样的对象数组（实例下拉框用后者：值是绝对
+// 路径，显示的是短名）。
+function fillOptions(select, items, fallback, emptyLabel) {
+  const pairs = items.map((item) =>
+    typeof item === "string" ? { value: item, label: item } : { value: item.path, label: item.label });
+  const before = select.value;
+  const keep = pairs.some((pair) => pair.value === before) ? before : fallback;
+  const options = [];
+  if (emptyLabel) options.push(`<option value="">${escapeHtml(emptyLabel)}</option>`);
+  for (const pair of pairs) {
+    const chosen = pair.value === keep ? " selected" : "";
+    options.push(`<option value="${escapeHtml(pair.value)}" title="${escapeHtml(pair.value)}"${chosen}>${escapeHtml(pair.label)}</option>`);
+  }
+  select.innerHTML = options.join("");
+}
+
+// profile / dataset 在 health 里是 "<名字>@<版本>"，新建沙箱要的是名字。
+const bareName = (ref) => String(ref || "").split("@")[0];
+
+function renderState() {
+  const state = app.state || {};
+  const health = state.health || {};
+  const sandbox = state.sandbox;
+
+  $("dot").className = "dot " + (state.running ? "on" : "off");
+  $("dot").setAttribute("aria-label", state.running ? "服务在运行" : "服务未运行");
+
+  fillOptions($("instance"), state.instances || [], state.instance, null);
+  $("versions").innerHTML = health.framework_version
+    ? `framework <b>${escapeHtml(health.framework_version)}</b> · 元模型 <b>${escapeHtml(health.meta_model_version)}</b> · 实例 <b>${escapeHtml(health.instance || "")}</b> · 业务包 <b>${escapeHtml((health.packs || []).join(", "))}</b>`
+    : "";
+
+  const profiles = (health.profiles || []).map(bareName);
+  const datasets = (health.datasets || []).map(bareName);
+  fillOptions($("new-profile"), profiles, sandbox ? bareName(sandbox.profile) : "", "profile（缺省）");
+  fillOptions($("new-dataset"), datasets, sandbox ? bareName(sandbox.dataset) : "", "数据集（缺省）");
+  fillOptions($("snapshot-list"), state.snapshots || [], "", (state.snapshots || []).length ? "选一个快照" : "（无快照）");
+
+  $("sandbox-tag").innerHTML = sandbox
+    ? `沙箱 <b>${escapeHtml(sandbox.sandbox_id)}</b> · ${escapeHtml(sandbox.status)}`
+    : "沙箱 —";
+  $("profile-tag").innerHTML = sandbox ? `profile <b>${escapeHtml(sandbox.profile)}</b>` : "profile —";
+  $("dataset-tag").innerHTML = sandbox ? `数据集 <b>${escapeHtml(sandbox.dataset)}</b>` : "数据集 —";
+  $("anchor-tag").innerHTML = sandbox ? `锚点 <b>${escapeHtml(sandbox.anchor_date)}</b>` : "锚点 —";
+
+  renderHistory();
+  renderLog();
+  if (state.failure) {
+    showError(state.failure.error, state.failure.detail);
+  }
+}
+
+/* ---------- 工具列表 ---------- */
+
+function renderToolList() {
+  const needle = $("tool-search").value.trim().toLowerCase();
+  const matched = app.tools.filter((tool) =>
+    !needle ||
+    tool.name.toLowerCase().includes(needle) ||
+    String(tool.description || "").toLowerCase().includes(needle));
+  $("tool-count").textContent = `${matched.length}/${app.tools.length}`;
+  $("tool-list").innerHTML = matched.map((tool) => {
+    const readOnly = tool.annotations && tool.annotations.readOnlyHint
+      ? '<span class="ro">只读</span>' : "";
+    const first = String(tool.description || "").split("\n")[0];
+    const chosen = app.current && app.current.name === tool.name ? ' aria-current="true"' : "";
+    return `<li><button type="button" data-tool="${escapeHtml(tool.name)}"${chosen}>
+      <div class="tool-name">${escapeHtml(tool.name)}${readOnly}</div>
+      <div class="tool-sub">${escapeHtml(first)}</div></button></li>`;
+  }).join("");
+}
+
+/* ---------- 入参表单 ---------- */
+
+// 一个属性 schema 归到哪一类控件。inputSchema 里出现的形态：标量、enum、format date、
+// 对象数组（分录）、标量数组；其余一律落到 JSON 文本框，什么都能填。
+function widgetOf(schema) {
+  const type = Array.isArray(schema.type) ? schema.type.find((t) => t !== "null") : schema.type;
+  if (Array.isArray(schema.enum)) return "enum";
+  if (type === "boolean") return "boolean";
+  if (type === "number" || type === "integer") return "number";
+  if (type === "string") return schema.format === "date" ? "date" : "string";
+  if (type === "array") {
+    const items = schema.items || {};
+    const itemType = Array.isArray(items.type) ? items.type[0] : items.type;
+    if (itemType === "object" && items.properties) return "rows";
+    if (itemType === "string" || itemType === "number" || itemType === "integer") return "list";
+  }
+  return "json";
+}
+
+function typeLabel(schema) {
+  const type = Array.isArray(schema.type) ? schema.type.join("|") : (schema.type || "any");
+  const bits = [type];
+  if (Array.isArray(schema.enum)) bits.push("枚举");
+  if (schema.format) bits.push(schema.format);
+  if (schema.minimum !== undefined) bits.push(`≥${schema.minimum}`);
+  if (schema.maximum !== undefined) bits.push(`≤${schema.maximum}`);
+  if (schema.minItems !== undefined || schema.maxItems !== undefined) {
+    bits.push(`${schema.minItems ?? 0}..${schema.maxItems ?? "∞"} 项`);
+  }
+  if (schema.maxLength !== undefined) bits.push(`≤${schema.maxLength} 字`);
+  return bits.join(" · ");
+}
+
+function scalarControl(id, schema, widget) {
+  switch (widget) {
+    case "enum": {
+      const options = ['<option value="">（不填）</option>'].concat(
+        schema.enum.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`));
+      return `<select id="${id}" data-widget="enum">${options.join("")}</select>`;
+    }
+    case "boolean":
+      return `<select id="${id}" data-widget="boolean">
+        <option value="">（不填）</option><option value="true">true</option><option value="false">false</option>
+      </select>`;
+    case "date":
+      return `<input type="date" id="${id}" data-widget="date">`;
+    case "number":
+      return `<input type="text" id="${id}" data-widget="number" inputmode="decimal" autocomplete="off" spellcheck="false">`;
+    default:
+      return `<input type="text" id="${id}" data-widget="string" autocomplete="off" spellcheck="false">`;
+  }
+}
+
+function fieldBlock(id, name, schema, required, control) {
+  const hint = schema.description ? `<div class="fhint">${escapeHtml(schema.description)}</div>` : "";
+  return `<div class="field">
+    <label for="${id}"><span class="fname">${escapeHtml(name)}</span>${required ? '<span class="req" title="必填">*</span>' : ""}
+      <span class="ftype">${escapeHtml(typeLabel(schema))}</span></label>
+    ${control}${hint}
+  </div>`;
+}
+
+function renderForm() {
+  const pane = $("pane-form");
+  if (!app.current) { pane.innerHTML = ""; return; }
+  const schema = app.current.inputSchema || {};
+  const properties = schema.properties || {};
+  const required = new Set(schema.required || []);
+  const names = Object.keys(properties);
+  if (!names.length) {
+    pane.innerHTML = '<p class="muted">这个工具不接受任何参数，直接点「调用」。</p>';
+    return;
+  }
+  pane.innerHTML = names.map((name) => {
+    const sub = properties[name];
+    const widget = widgetOf(sub);
+    const id = `f-${name}`;
+    if (widget === "rows") {
+      return `<div class="field" data-rows="${escapeHtml(name)}">
+        <div class="flabel"><span class="fname">${escapeHtml(name)}</span>${required.has(name) ? '<span class="req">*</span>' : ""}
+          <span class="ftype">${escapeHtml(typeLabel(sub))}</span></div>
+        ${sub.description ? `<div class="fhint" style="margin:0 0 6px">${escapeHtml(sub.description)}</div>` : ""}
+        <div class="rows"><div data-rows-body="${escapeHtml(name)}"></div>
+          <button type="button" data-add-row="${escapeHtml(name)}">+ 添加一行</button></div>
+      </div>`;
+    }
+    if (widget === "list") {
+      return fieldBlock(id, name, sub, required.has(name),
+        `<textarea id="${id}" data-widget="list" rows="3" spellcheck="false" placeholder="一行一个值"></textarea>`);
+    }
+    if (widget === "json") {
+      return fieldBlock(id, name, sub, required.has(name),
+        `<textarea id="${id}" data-widget="json" rows="4" spellcheck="false" placeholder="这个参数按 JSON 填写"></textarea>`);
+    }
+    return fieldBlock(id, name, sub, required.has(name), scalarControl(id, sub, widget));
+  }).join("");
+
+  for (const name of names) {
+    if (widgetOf(properties[name]) === "rows") addRow(name);
+  }
+}
+
+function addRow(name) {
+  const host = document.querySelector(`[data-rows-body="${CSS.escape(name)}"]`);
+  if (!host) return;
+  const items = (app.current.inputSchema.properties[name].items) || {};
+  const properties = items.properties || {};
+  const required = new Set(items.required || []);
+  const index = host.children.length;
+  const row = document.createElement("div");
+  row.className = "row";
+  row.dataset.row = String(index);
+  row.innerHTML = `<div class="row-head"><span class="idx">${escapeHtml(name)}[<span data-idx>${index}</span>]</span>
+      <span class="grow"></span><button type="button" class="danger" data-del-row>删除</button></div>` +
+    Object.keys(properties).map((key) => {
+      const sub = properties[key];
+      const widget = widgetOf(sub);
+      const id = `f-${name}-${index}-${key}`;
+      // 行内控件多带一个 data-key，取值时按它认字段；回调式替换，免得字段名里的 $ 被当成
+      // 替换模式。
+      const control = (widget === "rows" || widget === "list" || widget === "json")
+        ? `<textarea id="${id}" data-widget="json" data-key="${escapeHtml(key)}" rows="2" spellcheck="false"></textarea>`
+        : scalarControl(id, sub, widget).replace(
+            "data-widget=", () => `data-key="${escapeHtml(key)}" data-widget=`);
+      return fieldBlock(id, key, sub, required.has(key), control);
+    }).join("");
+  host.appendChild(row);
+  renumberRows(host);
+}
+
+function renumberRows(host) {
+  Array.from(host.children).forEach((row, index) => {
+    row.dataset.row = String(index);
+    const label = row.querySelector("[data-idx]");
+    if (label) label.textContent = String(index);
+  });
+}
+
+/* ---------- 表单 → arguments ---------- */
+
+class ArgError extends Error {}
+
+function convert(node, schema) {
+  const widget = node.dataset.widget;
+  const raw = node.value;
+  if (raw === "" || raw === null) return undefined;
+  switch (widget) {
+    case "boolean": return raw === "true";
+    case "number": {
+      const text = raw.trim();
+      if (text === "") return undefined;
+      if ($("as-string").checked) return text;
+      const asNumber = Number(text);
+      return Number.isFinite(asNumber) ? asNumber : text;
+    }
+    case "list": {
+      const values = raw.split("\n").map((v) => v.trim()).filter((v) => v !== "");
+      if (!values.length) return undefined;
+      const items = (schema && schema.items) || {};
+      const itemType = Array.isArray(items.type) ? items.type[0] : items.type;
+      if (itemType === "number" || itemType === "integer") {
+        return values.map((v) => ($("as-string").checked ? v : (Number.isFinite(Number(v)) ? Number(v) : v)));
+      }
+      return values;
+    }
+    case "json": {
+      const text = raw.trim();
+      if (text === "") return undefined;
+      try { return JSON.parse(text); }
+      catch (error) { throw new ArgError(`参数不是合法 JSON：${error.message}`); }
+    }
+    default: return raw;
+  }
+}
+
+function argumentsFromForm() {
+  if (!app.current) return {};
+  const schema = app.current.inputSchema || {};
+  const properties = schema.properties || {};
+  const result = {};
+  for (const name of Object.keys(properties)) {
+    const sub = properties[name];
+    if (widgetOf(sub) === "rows") {
+      const host = document.querySelector(`[data-rows-body="${CSS.escape(name)}"]`);
+      if (!host) continue;
+      const rows = [];
+      for (const row of host.children) {
+        const item = {};
+        for (const node of row.querySelectorAll("[data-key]")) {
+          const value = convert(node, (sub.items.properties || {})[node.dataset.key]);
+          if (value !== undefined) item[node.dataset.key] = value;
+        }
+        if (Object.keys(item).length) rows.push(item);
+      }
+      if (rows.length) result[name] = rows;
+      continue;
+    }
+    const node = $(`f-${name}`);
+    if (!node) continue;
+    const value = convert(node, sub);
+    if (value !== undefined) result[name] = value;
+  }
+  return result;
+}
+
+// 按 schema 生成骨架：必填项给类型占位，可选项不出现，省掉从零打字。
+function templateFromSchema(schema) {
+  const properties = (schema && schema.properties) || {};
+  const required = new Set((schema && schema.required) || []);
+  const skeleton = {};
+  for (const name of Object.keys(properties)) {
+    if (!required.has(name)) continue;
+    skeleton[name] = placeholder(properties[name]);
+  }
+  return skeleton;
+}
+
+function placeholder(schema) {
+  const type = Array.isArray(schema.type) ? schema.type.find((t) => t !== "null") : schema.type;
+  if (Array.isArray(schema.enum)) return schema.enum[0];
+  if (type === "boolean") return true;
+  if (type === "number" || type === "integer") return 0;
+  if (type === "array") {
+    const items = schema.items || {};
+    return [items.properties ? templateFromSchema(items) : placeholder(items)];
+  }
+  if (type === "object") return templateFromSchema(schema);
+  if (schema.format === "date") return "YYYY-MM-DD";
+  return "";
+}
+
+function currentArguments() {
+  if (app.mode === "json") {
+    const text = $("json-args").value.trim();
+    if (text === "") return {};
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch (error) { throw new ArgError(`arguments 不是合法 JSON：${error.message}`); }
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new ArgError("arguments 必须是 JSON 对象");
+    }
+    return parsed;
+  }
+  return argumentsFromForm();
+}
+
+/* ---------- 选工具 ---------- */
+
+function selectTool(name) {
+  // 再点一次当前工具不重建表单，否则已经填好的入参会被模板盖掉。
+  if (app.current && app.current.name === name) return;
+  const tool = app.tools.find((item) => item.name === name);
+  if (!tool) return;
+  app.current = tool;
+  $("tool-title").textContent = tool.name;
+  $("tool-desc").textContent = tool.description || "（这个工具没有描述）";
+  $("input-schema").innerHTML = jsonHtml(tool.inputSchema);
+  $("output-schema").innerHTML = jsonHtml(tool.outputSchema);
+  renderForm();
+  $("json-args").value = JSON.stringify(templateFromSchema(tool.inputSchema), null, 2);
+  renderToolList();
+  setBusy(app.busy);
+}
+
+function selectEditorTab(which) {
+  app.mode = which;
+  const isForm = which === "form";
+  $("tab-form").setAttribute("aria-selected", String(isForm));
+  $("tab-json").setAttribute("aria-selected", String(!isForm));
+  $("pane-form").classList.toggle("hidden", !isForm);
+  $("pane-json").classList.toggle("hidden", isForm);
+}
+
+const OUT_TABS = {
+  "tab-result": "pane-result",
+  "tab-trace": "pane-trace",
+  "tab-diff": "pane-diff",
+  "tab-history": "pane-history",
+  "tab-log": "pane-log",
+};
+
+function selectOutTab(which) {
+  for (const [tab, pane] of Object.entries(OUT_TABS)) {
+    $(tab).setAttribute("aria-selected", String(tab === which));
+    $(pane).classList.toggle("hidden", tab !== which);
+  }
+}
+
+/* ---------- 调用与结果 ---------- */
+
+async function runCall() {
+  if (!app.current) return;
+  let args;
+  try { args = currentArguments(); }
+  catch (error) { showError(error.message); return; }
+  await guard("调用", async () => {
+    const answer = await post("/api/call", { tool: app.current.name, arguments: args });
+    app.lastCall = answer;
+    await refreshState();
+    renderResult();
+    selectOutTab("tab-result");
+    announce(answer.is_error ? "调用返回错误" : "调用成功");
+  });
+}
+
+function renderResult() {
+  const call = app.lastCall;
+  $("result-empty").classList.add("hidden");
+  const body = $("result-body");
+  body.classList.remove("hidden");
+  const event = call.event || {};
+  $("timing").innerHTML = `往返 <b>${call.duration_ms.toFixed(1)} ms</b>` +
+    (event.latency_ms !== undefined ? ` · 服务端 <b>${escapeHtml(event.latency_ms)} ms</b>` : "");
+
+  const head = call.rpc_error
+    ? banner("err", `JSON-RPC 错误 ${call.rpc_error.code}：${call.rpc_error.message}`)
+    : call.is_error
+      ? banner("err", `isError = true${call.error ? `　错误码 ${call.error.code}` : ""}`,
+          call.error ? call.error.message : "")
+      : banner("ok", "isError = false");
+
+  const meta = [];
+  if (event.seq !== undefined) meta.push(`<span class="tag">trace seq <b>${escapeHtml(event.seq)}</b></span>`);
+  if (event.rule_id) meta.push(`<span class="tag">规则 <b>${escapeHtml(event.rule_id)}</b></span>`);
+  if (event.coerced && event.coerced.length) {
+    meta.push(`<span class="tag">强转参数 <b>${escapeHtml(event.coerced.join(", "))}</b></span>`);
+  }
+  if (event.writes) meta.push(`<span class="tag">写入 <b>${event.writes.length}</b> 条</span>`);
+
+  const blocks = [head, meta.length ? `<div class="kv">${meta.join("")}</div>` : ""];
+
+  if (call.structured !== null && call.structured !== undefined) {
+    blocks.push(`<div class="block"><h3>structuredContent（出参）</h3>
+      <pre class="json">${jsonHtml(call.structured)}</pre></div>`);
+  }
+  if (call.error) {
+    blocks.push(`<div class="block"><h3>error</h3><pre class="json">${jsonHtml(call.error)}</pre></div>`);
+  }
+  if (event.writes && event.writes.length) {
+    blocks.push(`<div class="block"><h3>writes（这次调用改了什么）</h3>
+      <pre class="json">${jsonHtml(event.writes)}</pre></div>`);
+  }
+  blocks.push(`<div class="block"><h3>入参</h3><pre class="json">${jsonHtml(call.arguments)}</pre></div>`);
+  blocks.push(`<details class="block"><summary>content[0].text</summary>
+    <pre class="json" style="margin-top:6px">${escapeHtml(call.text)}</pre></details>`);
+  blocks.push(`<details class="block"><summary>完整 JSON-RPC 响应</summary>
+    <pre class="json" style="margin-top:6px">${jsonHtml(call.raw)}</pre></details>`);
+  if (call.event) {
+    blocks.push(`<details class="block"><summary>trace 事件</summary>
+      <pre class="json" style="margin-top:6px">${jsonHtml(call.event)}</pre></details>`);
+  }
+  body.innerHTML = blocks.join("");
+}
+
+/* ---------- Trace / Diff / 历史 / 日志 ---------- */
+
+async function loadTrace() {
+  await guard("读取 trace", async () => {
+    const payload = await api("/api/trace");
+    const events = payload.events || [];
+    $("pane-trace").innerHTML = events.length
+      ? `<p class="inline-note">${events.length} 个事件，相对 trace.jsonl 原样展示；点一行看完整事件。</p>
+         <table><thead><tr><th>seq</th><th>event</th><th>tool</th><th>结果</th><th>ms</th></tr></thead>
+         <tbody>${events.map((event, index) => `
+           <tr class="clickable" data-trace="${index}">
+             <td class="mono">${escapeHtml(event.seq)}</td>
+             <td class="mono">${escapeHtml(event.event)}</td>
+             <td class="mono">${escapeHtml(event.tool || "")}</td>
+             <td class="${event.is_error ? "is-err" : "is-ok"}">${event.event === "tools_call" ? (event.is_error ? escapeHtml(event.error_code || "error") : "ok") : ""}</td>
+             <td class="mono">${escapeHtml(event.latency_ms ?? "")}</td>
+           </tr>
+           <tr class="hidden" data-trace-detail="${index}"><td colspan="5"><pre class="json">${jsonHtml(event)}</pre></td></tr>`).join("")}
+         </tbody></table>`
+      : '<p class="muted">这个沙箱还没有事件。</p>';
+    selectOutTab("tab-trace");
+  });
+}
+
+async function loadDiff() {
+  await guard("读取 diff", async () => {
+    const base = $("snapshot-list").value;
+    const query = base ? `?base=${encodeURIComponent(base)}` : "";
+    const payload = await api("/api/diff" + query);
+    const changes = payload.changes || [];
+    $("pane-diff").innerHTML =
+      `<p class="inline-note">基准 <b>${escapeHtml(base || "initial")}</b>（想比命名快照就在上面的快照下拉框里选一个再点 Diff）
+         · ${changes.length} 条净变化</p>
+       <pre class="json">${jsonHtml(payload)}</pre>`;
+    selectOutTab("tab-diff");
+  });
+}
+
+function renderHistory() {
+  const history = (app.state && app.state.history) || [];
+  $("pane-history").innerHTML = history.length
+    ? `<p class="inline-note">点一行把入参回填到编辑器（JSON 模式）。</p>
+       <table><thead><tr><th>#</th><th>工具</th><th>结果</th><th>ms</th></tr></thead>
+       <tbody>${history.slice().reverse().map((item) => `
+         <tr class="clickable" data-history="${item.seq}">
+           <td class="mono">${escapeHtml(item.seq)}</td>
+           <td class="mono">${escapeHtml(item.tool)}</td>
+           <td class="${item.is_error ? "is-err" : "is-ok"}">${item.is_error ? "error" : "ok"}</td>
+           <td class="mono">${item.duration_ms.toFixed(1)}</td>
+         </tr>`).join("")}</tbody></table>`
+    : '<p class="muted">这个沙箱上还没有调用记录。重置沙箱或换实例会清空它。</p>';
+}
+
+function renderLog() {
+  const log = (app.state && app.state.log) || "";
+  $("pane-log").innerHTML = log
+    ? `<p class="inline-note">serve 子进程的日志（stderr）。</p><pre class="json">${escapeHtml(log)}</pre>`
+    : '<p class="muted">还没有日志。</p>';
+}
+
+/* ---------- 刷新与事件绑定 ---------- */
+
+async function refreshState() {
+  app.state = await api("/api/state");
+  renderState();
+}
+
+async function refreshTools() {
+  if (!app.state || !app.state.sandbox) { app.tools = []; app.current = null; renderToolList(); return; }
+  const payload = await api("/api/tools");
+  app.tools = payload.tools || [];
+  const keep = app.current && app.tools.find((tool) => tool.name === app.current.name);
+  app.current = null;
+  renderToolList();
+  if (keep) selectTool(keep.name);
+}
+
+async function bootstrap() {
+  try {
+    await refreshState();
+    await refreshTools();
+  } catch (error) {
+    showError("初始化失败：" + error.message, error.detail);
+  }
+  setBusy(false);
+}
+
+$("reload").addEventListener("click", () => guard("重新加载", async () => {
+  await post("/api/reload", { instance: $("instance").value });
+  await refreshState();
+  await refreshTools();
+  announce("实例已重新加载");
+}));
+
+$("instance").addEventListener("change", () => $("reload").click());
+
+$("new-sandbox").addEventListener("click", () => guard("新建沙箱", async () => {
+  await post("/api/sandbox", {
+    profile: $("new-profile").value || null,
+    dataset: $("new-dataset").value || null,
+    anchor_date: $("new-anchor").value || null,
+  });
+  await refreshState();
+  await refreshTools();
+}));
+
+$("reset-sandbox").addEventListener("click", () => guard("重置沙箱", async () => {
+  await post("/api/sandbox/reset", {});
+  app.lastCall = null;
+  $("result-body").classList.add("hidden");
+  $("result-empty").classList.remove("hidden");
+  $("timing").textContent = "";
+  await refreshState();
+}));
+
+$("save-snapshot").addEventListener("click", () => guard("存快照", async () => {
+  const name = window.prompt("快照名（小写字母、数字、下划线、短横线，不能用 initial）");
+  if (!name) return;
+  await post("/api/sandbox/snapshot", { name });
+  await refreshState();
+}));
+
+$("restore-snapshot").addEventListener("click", () => guard("恢复快照", async () => {
+  const name = $("snapshot-list").value;
+  if (!name) { showError("先在下拉框里选一个命名快照"); return; }
+  await post("/api/sandbox/restore", { name });
+  await refreshState();
+}));
+
+$("tool-search").addEventListener("input", renderToolList);
+$("tool-list").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-tool]");
+  if (button) selectTool(button.dataset.tool);
+});
+
+$("tab-form").addEventListener("click", () => selectEditorTab("form"));
+$("tab-json").addEventListener("click", () => selectEditorTab("json"));
+$("from-form").addEventListener("click", () => {
+  try { $("json-args").value = JSON.stringify(argumentsFromForm(), null, 2); }
+  catch (error) { showError(error.message); }
+});
+$("from-schema").addEventListener("click", () => {
+  if (app.current) $("json-args").value = JSON.stringify(templateFromSchema(app.current.inputSchema), null, 2);
+});
+$("fmt-json").addEventListener("click", () => {
+  try { $("json-args").value = JSON.stringify(JSON.parse($("json-args").value || "{}"), null, 2); }
+  catch (error) { showError("格式化失败：" + error.message); }
+});
+
+$("pane-form").addEventListener("click", (event) => {
+  const add = event.target.closest("[data-add-row]");
+  if (add) { addRow(add.dataset.addRow); return; }
+  const del = event.target.closest("[data-del-row]");
+  if (del) {
+    const row = del.closest(".row");
+    const host = row.parentElement;
+    row.remove();
+    renumberRows(host);
+  }
+});
+
+$("run").addEventListener("click", runCall);
+document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); runCall(); }
+});
+
+$("tab-result").addEventListener("click", () => selectOutTab("tab-result"));
+$("tab-trace").addEventListener("click", loadTrace);
+$("tab-diff").addEventListener("click", loadDiff);
+$("tab-history").addEventListener("click", () => { renderHistory(); selectOutTab("tab-history"); });
+$("tab-log").addEventListener("click", () => guard("读取日志", async () => {
+  await refreshState();
+  selectOutTab("tab-log");
+}));
+
+$("pane-trace").addEventListener("click", (event) => {
+  const row = event.target.closest("[data-trace]");
+  if (!row) return;
+  const detail = document.querySelector(`[data-trace-detail="${row.dataset.trace}"]`);
+  if (detail) detail.classList.toggle("hidden");
+});
+
+$("pane-history").addEventListener("click", (event) => {
+  const row = event.target.closest("[data-history]");
+  if (!row) return;
+  const item = ((app.state && app.state.history) || []).find((h) => String(h.seq) === row.dataset.history);
+  if (!item) return;
+  selectTool(item.tool);
+  selectEditorTab("json");
+  $("json-args").value = JSON.stringify(item.arguments, null, 2);
+  announce(`已回填 ${item.tool} 的入参`);
+});
+
+bootstrap();
+</script>
+</body>
+</html>

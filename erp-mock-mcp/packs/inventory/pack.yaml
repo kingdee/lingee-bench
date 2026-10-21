@@ -1,0 +1,29 @@
+# inventory：示例业务包的库存包（docs/packs/example-p2p.md 第 4、6 节）。
+# M0 只做两件事：即时库存查询，以及按盘点差异增减库存的库存调整单。
+# 调拨单、R-INV-001 与 inventory_transaction_search 不属于 M0（需求 21 第 4 条），本包不声明。
+#
+# primitives 只列本包配置实际使用的 M0 原语（需求 21 第 1 条，判定方式见需求 2 第 6 条）：
+#   crud、numbering —— 库存调整单的增删改查与内部 ID、单据编号；
+#   state_machine —— 单据的 standard 状态机；
+#   unit_conversion —— 分录声明了数量语义，引擎据此把 qty 折成 qty_base；
+#   inventory —— 审核时的 adjust 方向联动，以及 exposure.yaml 中的即时库存查询。
+# 没有 rule_expr：本包在 M0 只有一条 described 规则 R-INV-002，不含规则表达式；
+# 也没有 pricing、conversion、writeback：调整单不计价，既不是下推的来源也不是目标。
+#
+# description_variants 只含 zh-detailed：M0 的 profile 只能取这一个变体（需求 2 第 13 条）。
+pack: inventory
+version: 1.0.0
+title: { zh: 库存, en: Inventory }
+requires_meta_model: ">=0.1.0 <1.0.0"
+depends_on:
+  core: ">=1.0.0 <2.0.0"
+primitives: [crud, numbering, state_machine, unit_conversion, inventory]
+rule_prefix: INV
+id_prefixes: [sadj]
+number_prefixes: [KCTZ]
+# 本包生成的工具名都以这些前缀开头：stock_adjustment_create（含被 exclude 去掉的 submit 与
+# approve）与 inventory_balance_query。两个包的工具前缀不得互为前缀（需求 11 第 2 条）。
+tool_prefixes: [stock_adjustment_, inventory_]
+description_variants: [zh-detailed]
+license: Apache-2.0
+maintainers: ["ERP-Mock-MCP 维护者"]

@@ -1,0 +1,9 @@
+# 共享基础数据（seed-data.md 第 1 节）：本包提供的组织。
+#
+# 文件名带序号，因为包内的共享数据按 seed/ 文件路径的 Unicode 码点升序创建
+# （需求 20 第 17 条）：部门引用组织、员工引用部门，所以组织必须排在最前。
+#
+# org 没有 code 生成规则，编码在这里写定；is_default 为 true 的这一条是缺省组织，
+# 内部 ID 为 org_000001。
+records:
+  - { kind: org, code: ORG01, name: 示例制造总部, is_default: true }

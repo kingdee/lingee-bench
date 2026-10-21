@@ -1,0 +1,9 @@
+# 由 `lg-bench harness compose deepseek-harness` 生成，勿手改；随 docker/harness/harness-lock.json 更新。
+# 把预构建的 deepseek-harness 只读镜像挂到 /opt/lg-harness/deepseek-harness（镜像内文件位于根目录）。
+services:
+  main:
+    volumes:
+      - type: image
+        source: lg-bench/harness-deepseek-harness:0.2.0-rc.2-8f11869f3ee6
+        target: /opt/lg-harness/deepseek-harness
+        read_only: true

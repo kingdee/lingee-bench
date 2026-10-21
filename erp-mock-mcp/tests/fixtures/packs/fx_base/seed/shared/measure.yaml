@@ -1,0 +1,5 @@
+# 计量单位：编码在这里写定，供存货、分录和单位换算按编码引用。
+# 内部 ID 依次为 msr_000001（PCS，基本单位）、msr_000002（BOX，换算单位）。
+records:
+  - { kind: measure, code: PCS, name: 夹具基本件 }
+  - { kind: measure, code: BOX, name: 夹具标准箱 }

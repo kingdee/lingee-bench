@@ -1,0 +1,30 @@
+# 采购订单下推采购入库单（需求 21 第 5 条）：require_source_status 为 approved，limit_by 为
+# qty，line_selection 为 by_source_line_id，required_line_inputs 为 source_line_id、qty、
+# warehouse_id。这正是 meta-model.md 第 7 节用来说明下推语法的那个例子。
+#
+# 额度按数量：每个订单行的可入库数量等于它的 qty_base 减去已被本 conversion 生成的未删除入库
+# 分录占用的数量（含草稿），超额时返回 R-GEN-005（需求 8 第 5 条）。同一订单行可以在一次下推中
+# 出现多次，分别入不同仓库，额度按这些分录的 qty_base 合计校验（需求 8 第 7 条）。
+#
+# header_mapping 带入供应商与单价口径：入库单的金额必须与订单一致，所以 price_includes_tax
+# 不能由调用方另填（需求 6 第 3 条：映射带入时不再取缺省值）。
+# line_mapping 带入物料、计量单位、单价与税率，调用方只填数量与入库仓库。
+#
+# 下推工具名为 purchase_receipt_create_from_order，来源简称 order 由 tools/exposure.yaml 的
+# source_short_names 声明（需求 11 第 13 条）。
+conversion:
+  id: purchase_order_to_receipt
+  source: purchase_order
+  target: purchase_receipt
+  require_source_status: approved
+  limit_by: qty
+  line_selection: by_source_line_id
+  header_mapping:
+    supplier_id: source.supplier_id
+    price_includes_tax: source.price_includes_tax
+  line_mapping:
+    material_id: source_line.material_id
+    unit_id: source_line.unit_id
+    price: source_line.price
+    tax_rate: source_line.tax_rate
+  required_line_inputs: [source_line_id, qty, warehouse_id]

@@ -1,0 +1,27 @@
+# 每个 trial 追加的 MCP 代理 sidecar（job YAML 的 environment.extra_docker_compose 引用）。
+# - harness 容器统一连 http://lg-mcp-proxy:18090/mcp（无密钥）。
+# - 真实 ERP 的 URL 与密钥头从运行 Harbor 的进程环境（--env-file）插值，只进入本容器。
+# - LG_MCP_TARGET=real 转发到真实 ERP（注入 LG_ERP_MCP_HEADERS）；=mock 转发到 LG_MCP_MOCK_URL。
+# - 调用日志写到 trial 的 agent/mcp-proxy/requests.jsonl。
+# - 镜像需预先构建：docker build -f docker/mcp-proxy/Dockerfile -t lg-bench/mcp-proxy:0.1.0 .
+services:
+  lg-mcp-proxy:
+    image: ${LG_MCP_PROXY_IMAGE:-lg-bench/mcp-proxy:0.1.0}
+    pull_policy: never
+    user: "0:0"  # 需要写入宿主机上的 trial 日志目录
+    environment:
+      LG_MCP_TARGET: ${LG_MCP_TARGET:-mock}
+      LG_ERP_MCP_URL: ${LG_ERP_MCP_URL:-}
+      LG_ERP_MCP_HEADERS: ${LG_ERP_MCP_HEADERS:-}
+      LG_MCP_MOCK_URL: ${LG_MCP_MOCK_URL:-}
+      LG_MCP_MOCK_HEADERS: ${LG_MCP_MOCK_HEADERS:-}
+      # real 模式必填：只把这些工具暴露给 harness（真实网关约 2000 个工具，含大量写操作）
+      LG_MCP_ALLOWED_TOOLS: ${LG_MCP_ALLOWED_TOOLS:-}
+      LG_MCP_ALLOW_ALL: ${LG_MCP_ALLOW_ALL:-}
+      LG_MCP_LOG_DIR: /mcp-logs
+    volumes:
+      - ${HOST_AGENT_LOGS_PATH:?HOST_AGENT_LOGS_PATH not provided by Harbor}/mcp-proxy:/mcp-logs
+  main:
+    depends_on:
+      lg-mcp-proxy:
+        condition: service_healthy

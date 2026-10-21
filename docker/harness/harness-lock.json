@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "comment": "Harness 只读镜像的构建输入锁。由 `lg-bench harness lock` 维护；修改任一字段或 docker/harness/<name>/ 下的文件都会改变 lockhash 与镜像标签。",
+  "base": {
+    "builder": "debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587",
+    "min_glibc": "2.36",
+    "node": "node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c",
+    "node_version": "22.23.3"
+  },
+  "harness": {
+    "claude-code": {
+      "version": "2.1.187",
+      "license": "proprietary",
+      "license_url": "https://www.anthropic.com/legal/commercial-terms",
+      "publish_image": false,
+      "platforms": {
+        "linux/arm64": {
+          "artifacts": [
+            {
+              "file": "claude",
+              "url": "https://downloads.claude.ai/claude-code-releases/2.1.187/linux-arm64/claude",
+              "sha256": "b49be8a5e565bf2d45b50d2de62017b25462131acc9425d2fdb98b8f29c9dce2",
+              "size": 232240864
+            }
+          ],
+          "debs": [
+            {
+              "package": "procps",
+              "version": "2:4.0.2-3",
+              "sha256": "94414d947f009b55d50e2adf19d92038998bf7fa9ec553b1b6167fb02b5c1855"
+            },
+            {
+              "package": "libproc2-0",
+              "version": "2:4.0.2-3",
+              "sha256": "d2d31e0f862dd60a813e245024d00cf47deb6465fd42122543824652487224be"
+            }
+          ],
+          "binary": {
+            "path": "bin/claude",
+            "sha256": "b49be8a5e565bf2d45b50d2de62017b25462131acc9425d2fdb98b8f29c9dce2"
+          }
+        },
+        "linux/amd64": {
+          "artifacts": [
+            {
+              "file": "claude",
+              "url": "https://downloads.claude.ai/claude-code-releases/2.1.187/linux-x64/claude",
+              "sha256": "bb02fcb33626f8c599d10d8bee38585d4cf8d4225c3b497869dee7454e7bf361",
+              "size": 234874664
+            }
+          ],
+          "debs": [
+            {
+              "package": "procps",
+              "version": "2:4.0.2-3",
+              "sha256": "d9d0e75779cb79af869181f17b93c5c263a2b89cac6a0193c436160a4483ddc1"
+            },
+            {
+              "package": "libproc2-0",
+              "version": "2:4.0.2-3",
+              "sha256": "e82ba5d01929eafb8b9954606a3c38b0332a987c2b3432388b4ee7365e54deae"
+            }
+          ],
+          "binary": {
+            "path": "bin/claude",
+            "sha256": "bb02fcb33626f8c599d10d8bee38585d4cf8d4225c3b497869dee7454e7bf361"
+          }
+        }
+      },
+      "kind": "binary"
+    },
+    "opencode": {
+      "version": "1.19.0",
+      "license": "MIT",
+      "license_url": "https://github.com/anomalyco/opencode/blob/dev/LICENSE",
+      "publish_image": false,
+      "platforms": {
+        "linux/arm64": {
+          "artifacts": [
+            {
+              "file": "opencode-linux-arm64-1.19.0.tgz",
+              "url": "https://registry.npmjs.org/opencode-linux-arm64/-/opencode-linux-arm64-1.19.0.tgz",
+              "integrity": "sha512-XD1qcVN4jEiaYHqtx40p8cEPJxBc1mcB99ksgQ81akZsGGwcNFyG6GH857jVEplbGgdzWiWxDCrSii56sHjmRQ=="
+            }
+          ],
+          "debs": [],
+          "binary": {
+            "path": "bin/opencode",
+            "sha256": "1e392db1d558a9eebaef618d4da3927f8b61fbcbd9a19513ed77f911142415df"
+          }
+        },
+        "linux/amd64": {
+          "artifacts": [
+            {
+              "file": "opencode-linux-x64-baseline-1.19.0.tgz",
+              "url": "https://registry.npmjs.org/opencode-linux-x64-baseline/-/opencode-linux-x64-baseline-1.19.0.tgz",
+              "integrity": "sha512-9EopGD/LvTfUBF24NyJFnkLd12CG0Tu7JO/BqHmjwASnaJbCmFQjx8KCJ5UBMPG/wwsBiXZiP8T0VMNTPWfnnw=="
+            }
+          ],
+          "debs": [],
+          "binary": {
+            "path": "bin/opencode",
+            "sha256": "135ac3f86c43f2a22328a3554fec5f0bc57d71576077902661bc38dac34871fd"
+          }
+        }
+      },
+      "kind": "binary"
+    },
+    "pi": {
+      "kind": "node",
+      "version": "1.1.0",
+      "package": "@earendil-works/pi-coding-agent",
+      "cli": "pi",
+      "license": "MIT",
+      "license_url": "https://github.com/earendil-works/pi/blob/main/LICENSE",
+      "publish_image": false,
+      "platforms": {
+        "linux/arm64": {
+          "artifacts": [],
+          "debs": [],
+          "binary": {
+            "path": "lib/node/bin/node",
+            "sha256": "d09e299258c24f7cdf6f5d5ec185e3a56512b27a697113735dac909f1cac7b8d"
+          },
+          "tree_sha256": "7ee3db4735b4e8d5a30b28435e9f47ebb82f7c725d55a2247bbf29925b53564f"
+        },
+        "linux/amd64": {
+          "artifacts": [],
+          "debs": [],
+          "binary": {
+            "path": "lib/node/bin/node",
+            "sha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+          },
+          "tree_sha256": null
+        }
+      }
+    },
+    "deepseek-harness": {
+      "kind": "node",
+      "version": "0.2.0-rc.2",
+      "package": "@deepseek-ai/dsh",
+      "cli": "dsh",
+      "license": "MIT",
+      "license_url": "https://github.com/deepseek-ai/deepseek-harness/blob/master/LICENSE",
+      "publish_image": false,
+      "platforms": {
+        "linux/arm64": {
+          "artifacts": [],
+          "debs": [],
+          "binary": {
+            "path": "lib/node/bin/node",
+            "sha256": "d09e299258c24f7cdf6f5d5ec185e3a56512b27a697113735dac909f1cac7b8d"
+          },
+          "tree_sha256": "2cb6e83a46919d6ce62f57a84a02fc1134221f4ddcee55ad94e956df25f5e325"
+        },
+        "linux/amd64": {
+          "artifacts": [],
+          "debs": [],
+          "binary": {
+            "path": "lib/node/bin/node",
+            "sha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48"
+          },
+          "tree_sha256": null
+        }
+      }
+    }
+  }
+}

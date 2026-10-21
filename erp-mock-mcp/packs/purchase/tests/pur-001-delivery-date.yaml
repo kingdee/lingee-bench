@@ -1,0 +1,82 @@
+# 包级测试用例：enforced 规则 R-PUR-001 的违反用例与通过用例（需求 21 第 9 条）。
+#
+# 规则的 check 是 `header.delivery_date >= header.biz_date`，on 为 create、update、submit，
+# 所以第 1 步在 create 时求值、第 3 步在 update 时求值。规则不引用 line，details 恰好一项，
+# 字段路径为 delivery_date（需求 10 第 7 条）。
+#
+# 锚点日期写定为 2026-10-09：步骤的参数只接受 YYYY-MM-DD 的真实日期，而 biz_date 不填时取
+# 当前业务日期，也就是锚点日期（需求 16 第 2 条），这样"早于业务日期"才是确定的。
+#
+# setup 只建一个供应商和一个物料：create 只改表头与分录，不动库存，所以不需要期初库存。
+# 物料的采购单位与基本单位相同，qty_base 等于 qty，金额与换算在另外两个用例里核对。
+# 内部 ID 按创建顺序分配，共享基础数据先建（需求 20 第 17 条），所以这里的供应商是
+# sup_000001、物料是 mat_000001，第 2 步建出的订单是 po_000001。
+case: pur-001-delivery-date
+anchor_date: 2026-10-09
+setup:
+  supplier:main:
+    kind: supplier
+    name: 规则用例专用紧固件供应商
+    short_name: 规则紧固
+  material:bolt:
+    kind: material
+    name: 规则用例专用六角螺栓
+    spec: 规则用例规格 M8X40
+    material_kind: raw
+    base_unit: PCS
+    purchase_unit: PCS
+    tax_rate: "0.13"
+steps:
+  # 交货日期早于业务日期：规则不成立，错误码取自规则，rule_id 为规则编号
+  - call: purchase_order_create
+    args:
+      supplier_id: "$supplier:main"
+      delivery_date: "2026-10-08"
+      lines:
+        - { material_id: "$material:bolt", qty: "10", price: "1.13" }
+    expect: { is_error: true, error_code: VALIDATION_FAILED, rule_id: R-PUR-001 }
+  # 交货日期等于业务日期：>= 成立，建出草稿。税率不填，取物料的 tax_rate；单价缺省含税，
+  # 所以 amount_with_tax = round(10 × 1.13, 2) = 11.30，amount = round(11.30 ÷ 1.13, 2) = 10.00
+  - call: purchase_order_create
+    args:
+      supplier_id: "$supplier:main"
+      delivery_date: "2026-10-09"
+      lines:
+        - { material_id: "$material:bolt", qty: "10", price: "1.13" }
+    alias: purchase_order:drafted
+    expect:
+      is_error: false
+      result:
+        id: po_000001
+        status: draft
+        biz_date: "2026-10-09"
+        delivery_date: "2026-10-09"
+        supplier: { id: sup_000001, code: S0001 }
+        price_includes_tax: true
+        amount: "10.00"
+        tax_amount: "1.30"
+        amount_with_tax: "11.30"
+        lines:
+          - line_no: 1
+            material: { id: mat_000001, code: M00001 }
+            unit: { id: unit_000001, code: PCS }
+            qty: "10"
+            qty_base: "10"
+            price: "1.13"
+            tax_rate: "0.13"
+            amount_with_tax: "11.30"
+            # 还没有任何入库单下推过本行，反写字段为空值（需求 8 第 9 条）
+            linked_qty: null
+            source_line_id: null
+  # update 也在 on 中：把交货日期改到业务日期之前，同样被拦住
+  - call: purchase_order_update
+    args: { id: "$purchase_order:drafted", delivery_date: "2026-10-01" }
+    expect: { is_error: true, error_code: VALIDATION_FAILED, rule_id: R-PUR-001 }
+  # 上一步整体回滚，草稿的交货日期仍是原值（需求 12 第 7 条）
+  - call: purchase_order_get
+    args: { id: "$purchase_order:drafted" }
+    expect: { result: { status: draft, delivery_date: "2026-10-09" } }
+  # submit 也在 on 中：交货日期合规的草稿可以提交
+  - call: purchase_order_submit
+    args: { id: "$purchase_order:drafted" }
+    expect: { result: { status: submitted } }
