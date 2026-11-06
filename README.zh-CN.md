@@ -2,15 +2,18 @@
 
 [English](README.md) | **简体中文**
 
-Lingee Bench 是基于 [Harbor](https://github.com/harbor-framework/harbor) 的 Agent 评测框架，提供 harness 适配、模型与 MCP 代理、离线 ERP mock 服务、批跑与评分汇总工具。题目、输入数据和评分器随题集发布在 Hugging Face：[KD-Lingee/lingee-bench](https://huggingface.co/datasets/KD-Lingee/lingee-bench)。
+Lingee Bench 是基于 [Harbor](https://github.com/harbor-framework/harbor) 的 Agent 评测框架，提供 harness 适配、模型与 MCP 代理、离线 ERP mock 服务、批跑与评分汇总工具。题目、输入数据和评分器随题集发布，有两个内容相同的下载来源，任选其一：
+
+- Hugging Face：[KD-Lingee/lingee-bench](https://huggingface.co/datasets/KD-Lingee/lingee-bench)
+- GitHub：[kingdee/lingee-bench-datasets](https://github.com/kingdee/lingee-bench-datasets)
 
 | 题集 | 题量 | 获取方式 |
 | --- | ---: | --- |
-| 企业管理 | 30 | 从 Hugging Face 下载到 `datasets/lg-bench-enterprise-v1.0/`；财务、制造、供应链 |
-| 通用任务 | 35 | 从 Hugging Face 下载到 `datasets/lg-bench-general-v1.0/`；数据分析、文档、检索、图像及日程 |
+| 企业管理 | 30 | 从 Hugging Face 或 GitHub 下载到 `datasets/lg-bench-enterprise-v1.0/`；财务、制造、供应链 |
+| 通用任务 | 35 | 从 Hugging Face 或 GitHub 下载到 `datasets/lg-bench-general-v1.0/`；数据分析、文档、检索、图像及日程 |
 | 示例任务 | 2 | 随仓库提供，位于 [examples/tasks](examples/tasks)；用于框架自测和出题参考，不计正式成绩 |
 
-企业管理与通用任务分别报告成绩。发布版本由本仓库的 Git 提交或 tag、题集的 Hugging Face revision、题目清单和文件摘要共同标识。
+企业管理与通用任务分别报告成绩。发布版本由本仓库的 Git 提交或 tag、题集的来源与 revision（Hugging Face revision 或 GitHub 提交/tag）、题目清单和文件摘要共同标识。
 
 支持 Claude Code、Pi、DeepSeek Harness、OpenCode。运行要求和配置见[文档目录](docs/README.md)。
 
@@ -59,12 +62,29 @@ uv run python .agents/skills/lg-bench-setup/scripts/summarize_job.py jobs/smoke-
 
 ## 3. 下载题集
 
-固定 revision 的方法见[题集下载](datasets/README.md)：
+两个来源任选其一，固定 revision 的方法见[题集下载](datasets/README.md)。
+
+从 Hugging Face 下载：
 
 ```bash
 uvx --from huggingface_hub hf download KD-Lingee/lingee-bench \
   --repo-type dataset --revision <revision> --local-dir datasets \
   --include "lg-bench-*/**" --include "environments/**" --include "registry.json"
+```
+
+或从 GitHub 下载。二进制输入用 Git LFS 存储，需先安装 [git-lfs](https://git-lfs.com/)，否则拿到的是指针文件。先克隆到临时目录，再只复制题集与评测环境，避免数据仓库根目录的 README 覆盖 `datasets/README.md`：
+
+```bash
+git lfs install
+D=.cache/lingee-bench-datasets
+git clone https://github.com/kingdee/lingee-bench-datasets.git "$D"
+git -C "$D" checkout <revision>
+cp -R "$D"/lg-bench-enterprise-v1.0 "$D"/lg-bench-general-v1.0 "$D"/environments "$D"/registry.json datasets/
+```
+
+下载后校验：
+
+```bash
 uv run python scripts/check_release.py --datasets
 ```
 
@@ -113,7 +133,7 @@ uv run python .agents/skills/erp-mock-batch-eval/scripts/batch.py summary --batc
 
 ## 成绩怎么读
 
-汇总按评分状态分桶：只有正式评分（graded）进入均分；执行异常、评测错误（含 Judge 故障）、未出分、未结束单独列出，不当作 0 分。报告成绩时写明仓库提交、题集 revision、harness 与版本、Agent 与 Judge 模型、尝试次数，以及均分的分母。通用题集与 ERP 题集分别报告。
+汇总按评分状态分桶：只有正式评分（graded）进入均分；执行异常、评测错误（含 Judge 故障）、未出分、未结束单独列出，不当作 0 分。报告成绩时写明仓库提交、题集来源与 revision、harness 与版本、Agent 与 Judge 模型、尝试次数，以及均分的分母。通用题集与 ERP 题集分别报告。
 
 ## 检查与开发
 
@@ -150,4 +170,4 @@ docs/                            使用与评分文档
 
 ## 许可
 
-自有代码与文档采用[Apache-2.0](LICENSE)。第三方组件保留原有作者、版权及许可声明，范围见[NOTICE](NOTICE)。题集的许可见 Hugging Face 数据集卡片。
+自有代码与文档采用[Apache-2.0](LICENSE)。第三方组件保留原有作者、版权及许可声明，范围见[NOTICE](NOTICE)。题集的许可见 Hugging Face 数据集卡片或 GitHub 数据仓库的 LICENSE。

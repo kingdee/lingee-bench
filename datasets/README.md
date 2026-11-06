@@ -1,8 +1,13 @@
 # 题集
 
-正式题集和 ERP 评测环境发布在 Hugging Face：[KD-Lingee/lingee-bench](https://huggingface.co/datasets/KD-Lingee/lingee-bench)，不随本仓库分发。本目录只有这份说明，下载后的内容已被 `.gitignore` 忽略。
+正式题集和 ERP 评测环境不随本仓库分发，有两个内容相同的下载来源，任选其一：
 
-## 下载
+- Hugging Face：[KD-Lingee/lingee-bench](https://huggingface.co/datasets/KD-Lingee/lingee-bench)
+- GitHub：[kingdee/lingee-bench-datasets](https://github.com/kingdee/lingee-bench-datasets)
+
+本目录只有这份说明，下载后的内容已被 `.gitignore` 忽略。
+
+## 从 Hugging Face 下载
 
 在仓库根目录执行（需要 [huggingface_hub](https://huggingface.co/docs/huggingface_hub/guides/cli) 提供的 `hf` 命令）：
 
@@ -16,7 +21,25 @@ uvx --from huggingface_hub hf download KD-Lingee/lingee-bench \
 - `--include` 只拉题集与评测环境，避免 Hugging Face 仓库根目录的 README、LICENSE 覆盖本目录的说明；题集许可见 [数据集卡片](https://huggingface.co/datasets/KD-Lingee/lingee-bench)。
 - 题集如果启用了 gated 访问，先执行 `uvx --from huggingface_hub hf auth login`。
 
-下载后的目录结构：
+## 从 GitHub 下载
+
+在仓库根目录执行（需要 [git-lfs](https://git-lfs.com/)）：
+
+```bash
+git lfs install
+D=.cache/lingee-bench-datasets
+git clone https://github.com/kingdee/lingee-bench-datasets.git "$D"
+git -C "$D" checkout <revision>
+cp -R "$D"/lg-bench-enterprise-v1.0 "$D"/lg-bench-general-v1.0 "$D"/environments "$D"/registry.json datasets/
+```
+
+- xlsx、docx、png、tar.gz、db 等二进制输入用 Git LFS 存储。没装 git-lfs 时克隆得到的是指针文件，`check_release.py --datasets` 的摘要校验会失败。
+- 正式评测请把 `<revision>` 换成 GitHub 上固定的提交号或 tag，并随成绩一起记录。GitHub 与 Hugging Face 的提交号互不通用，记录时注明来源。
+- 先克隆到 `.cache/`（已被 `.gitignore` 忽略）再复制，避免数据仓库根目录的 README、LICENSE 覆盖本目录的说明。更新题集时先删掉 `datasets/` 下旧的同名目录再复制，以免残留已删除的文件。
+
+## 下载后的目录结构
+
+两个来源的目录结构相同：
 
 | 路径 | 内容 | 使用方 |
 | --- | --- | --- |

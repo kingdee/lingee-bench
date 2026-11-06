@@ -2,15 +2,18 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-Lingee Bench is an agent evaluation framework built on [Harbor](https://github.com/harbor-framework/harbor). It provides harness adapters, model and MCP proxies, an offline ERP mock service, and batch-run and scoring tools. The tasks, input data and graders are published as a dataset on Hugging Face: [KD-Lingee/lingee-bench](https://huggingface.co/datasets/KD-Lingee/lingee-bench).
+Lingee Bench is an agent evaluation framework built on [Harbor](https://github.com/harbor-framework/harbor). It provides harness adapters, model and MCP proxies, an offline ERP mock service, and batch-run and scoring tools. The tasks, input data and graders are published as a dataset with two download sources that carry the same content; use either one:
+
+- Hugging Face: [KD-Lingee/lingee-bench](https://huggingface.co/datasets/KD-Lingee/lingee-bench)
+- GitHub: [kingdee/lingee-bench-datasets](https://github.com/kingdee/lingee-bench-datasets)
 
 | Split | Tasks | Where to get it |
 | --- | ---: | --- |
-| Enterprise | 30 | Download from Hugging Face into `datasets/lg-bench-enterprise-v1.0/`; finance, manufacturing, supply chain |
-| General | 35 | Download from Hugging Face into `datasets/lg-bench-general-v1.0/`; data analysis, documents, retrieval, images and scheduling |
+| Enterprise | 30 | Download from Hugging Face or GitHub into `datasets/lg-bench-enterprise-v1.0/`; finance, manufacturing, supply chain |
+| General | 35 | Download from Hugging Face or GitHub into `datasets/lg-bench-general-v1.0/`; data analysis, documents, retrieval, images and scheduling |
 | Examples | 2 | Shipped with the repository in [examples/tasks](examples/tasks); for framework self-tests and task authoring, not part of official scores |
 
-Enterprise and general results are reported separately. A release is identified by the Git commit or tag of this repository, the Hugging Face revision of the dataset, the task manifest and the file digests together.
+Enterprise and general results are reported separately. A release is identified by the Git commit or tag of this repository, the source and revision of the dataset (Hugging Face revision or GitHub commit/tag), the task manifest and the file digests together.
 
 Supported harnesses: Claude Code, Pi, DeepSeek Harness, OpenCode. See the [docs index](docs/README.md) for runtime requirements and configuration.
 
@@ -59,12 +62,29 @@ This job uses `glm-5.2`, which is the only model the proxy allows by default. To
 
 ## 3. Download the datasets
 
-See [datasets](datasets/README.md) for pinning a revision:
+Use either source. See [datasets](datasets/README.md) for pinning a revision.
+
+From Hugging Face:
 
 ```bash
 uvx --from huggingface_hub hf download KD-Lingee/lingee-bench \
   --repo-type dataset --revision <revision> --local-dir datasets \
   --include "lg-bench-*/**" --include "environments/**" --include "registry.json"
+```
+
+Or from GitHub. Binary inputs are stored with Git LFS, so install [git-lfs](https://git-lfs.com/) first; without it you get pointer files. Clone into a scratch directory and copy only the suites and the evaluation environment, so the data repository's root README does not overwrite `datasets/README.md`:
+
+```bash
+git lfs install
+D=.cache/lingee-bench-datasets
+git clone https://github.com/kingdee/lingee-bench-datasets.git "$D"
+git -C "$D" checkout <revision>
+cp -R "$D"/lg-bench-enterprise-v1.0 "$D"/lg-bench-general-v1.0 "$D"/environments "$D"/registry.json datasets/
+```
+
+Then verify:
+
+```bash
 uv run python scripts/check_release.py --datasets
 ```
 
@@ -113,7 +133,7 @@ Each task binds its own mock dataset and tool allowlist, so each task is its own
 
 ## Reading the scores
 
-Summaries bucket trials by scoring status. Only officially graded trials enter the mean; execution errors, evaluation errors (including judge failures), missing scores and unfinished trials are listed separately and never counted as zero. When reporting, state the repository commit, dataset revision, harness and version, agent and judge models, number of attempts, and the denominator of the mean. Report the general and ERP splits separately.
+Summaries bucket trials by scoring status. Only officially graded trials enter the mean; execution errors, evaluation errors (including judge failures), missing scores and unfinished trials are listed separately and never counted as zero. When reporting, state the repository commit, dataset source and revision, harness and version, agent and judge models, number of attempts, and the denominator of the mean. Report the general and ERP splits separately.
 
 ## Checks and development
 
@@ -150,4 +170,4 @@ docs/                usage and scoring documentation
 
 ## License
 
-Our own code and documentation are licensed under [Apache-2.0](LICENSE). Third-party components keep their original authorship, copyright and license notices; see [NOTICE](NOTICE) for the scope. The dataset license is stated on the Hugging Face dataset card.
+Our own code and documentation are licensed under [Apache-2.0](LICENSE). Third-party components keep their original authorship, copyright and license notices; see [NOTICE](NOTICE) for the scope. The dataset license is stated on the Hugging Face dataset card and in the LICENSE of the GitHub data repository.
